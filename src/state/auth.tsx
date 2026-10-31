@@ -63,9 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0d1424' : '#f3ecdc')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0b0d24' : '#e4ecff')
     try {
-      localStorage.setItem('aerogram:theme', theme)
+      localStorage.setItem('buddyline:theme', theme)
     } catch {
       /* private mode */
     }

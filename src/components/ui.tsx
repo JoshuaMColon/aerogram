@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffe
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { initials } from '../lib/logic'
+import type { BuddyState } from '../lib/types'
 
 /* ------------------------------------------------------------------ tap feedback */
 
@@ -103,13 +104,13 @@ export function Tip({ tip, children, side = 'top', block = false }: { tip: strin
 
 type Variant = 'red' | 'blue' | 'ghost' | 'plain' | 'danger'
 const VARIANT: Record<Variant, string> = {
-  red: 'bg-red text-on-accent border border-red lift',
-  blue: 'bg-blue text-on-accent border border-blue lift',
+  red: 'gloss bg-red text-on-accent border border-red lift',
+  blue: 'gloss bg-blue text-on-accent border border-blue lift',
   ghost: 'bg-card text-ink border border-line hover:border-edge lift',
   plain: 'bg-transparent text-ink border border-transparent hover:bg-sunk',
   danger: 'bg-card text-bad border border-bad lift',
 }
-const SIZE = { xs: 'h-7 px-2 text-xs gap-1 rounded-md', sm: 'h-8 px-2.5 text-sm gap-1.5 rounded-lg', md: 'h-10 px-4 text-[0.95rem] gap-2 rounded-lg', lg: 'h-12 px-6 text-base gap-2.5 rounded-xl' }
+const SIZE = { xs: 'h-7 px-2 text-xs gap-1 rounded-lg', sm: 'h-8 px-2.5 text-sm gap-1.5 rounded-lg', md: 'h-10 px-4 text-[0.95rem] gap-2 rounded-xl', lg: 'h-12 px-6 text-base gap-2.5 rounded-2xl' }
 
 interface BtnProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   tip: string
@@ -129,7 +130,7 @@ export function Btn({ tip, variant = 'ghost', size = 'md', iconOnly, side, block
           type={type}
           {...d}
           aria-label={iconOnly ? tip : rest['aria-label']}
-          className={`press relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden font-semibold ${SIZE[size]} ${VARIANT[variant]} ${block ? 'w-full' : ''} ${iconOnly ? 'aspect-square !px-0' : ''} ${className}`}
+          className={`press relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden font-bold ${SIZE[size]} ${VARIANT[variant]} ${block ? 'w-full' : ''} ${iconOnly ? 'aspect-square !px-0' : ''} ${className}`}
           onPointerDown={(e) => {
             if (!rest.disabled) inkDot(e)
             onPointerDown?.(e)
@@ -177,28 +178,59 @@ export function LinkBtn({
   )
 }
 
-/* ------------------------------------------------------------------ stamp avatars */
+/* ------------------------------------------------------------------ buddy icons */
 
-export const STAMP_COLORS = ['#a8322b', '#1d4b97', '#2d6a3e', '#7a4a12', '#6b3a8a', '#0f6670', '#9a3b62', '#3d4f7a', '#8a4a1c', '#4b6420', '#5a3d9a', '#7a2f3f']
+/** Twelve glossy buddy-icon palettes (top, bottom). */
+export const ICONS: [string, string][] = [
+  ['#7cc8ff', '#2a66e8'],
+  ['#ff9ad5', '#d61f86'],
+  ['#9ff0b4', '#18a454'],
+  ['#ffd27a', '#f07b12'],
+  ['#c9a6ff', '#7238e0'],
+  ['#7ff0ea', '#0c98a6'],
+  ['#ffb3a1', '#e0412b'],
+  ['#b6c3ff', '#4253d6'],
+  ['#e6f58a', '#86a80f'],
+  ['#ffc2e8', '#a43ccf'],
+  ['#9fe3ff', '#1688b8'],
+  ['#ffd0a0', '#c26a1a'],
+]
+/** Kept for older imports: the bottom colour of each icon. */
+export const STAMP_COLORS = ICONS.map((c) => c[1])
 
-export function Stamp({ name, stamp, size = 36, online, bot, className = '' }: { name: string; stamp: number; size?: number; online?: boolean; bot?: boolean; className?: string }) {
+const DOT: Record<BuddyState, string> = { online: 'bg-online', idle: 'bg-idle', away: 'bg-brass', offline: 'bg-edge' }
+
+export function Stamp({
+  name,
+  stamp,
+  size = 36,
+  online,
+  state,
+  bot,
+  className = '',
+}: {
+  name: string
+  stamp: number
+  size?: number
+  online?: boolean
+  state?: BuddyState
+  bot?: boolean
+  className?: string
+}) {
+  const [a, b] = ICONS[((stamp % 12) + 12) % 12]
+  const st: BuddyState | undefined = state ?? (online === undefined ? undefined : online ? 'online' : 'offline')
   return (
     <span className={`relative inline-flex shrink-0 ${className}`} style={{ width: size, height: size }} aria-hidden="true">
-      <span className={`stamp ${size >= 44 ? 'stamp-lg' : ''} block h-full w-full`}>
+      <span className={`stamp block h-full w-full ${st === 'offline' ? 'opacity-55 grayscale-[0.6]' : ''}`}>
         <span
-          className="flex h-full w-full items-center justify-center font-display font-bold text-[#fffaf0]"
-          style={{ background: STAMP_COLORS[((stamp % 12) + 12) % 12], fontSize: size * 0.36, letterSpacing: '0.02em' }}
+          className="flex h-full w-full items-center justify-center font-extrabold text-white"
+          style={{ background: `linear-gradient(160deg, ${a}, ${b})`, fontSize: size * 0.4, textShadow: '0 1px 1px rgb(0 0 0 / 0.3)' }}
         >
           {initials(name)}
         </span>
       </span>
-      {online !== undefined && (
-        <span
-          className={`absolute -bottom-0.5 -right-0.5 block rounded-full border-2 border-card ${online ? 'bg-online' : 'bg-edge'}`}
-          style={{ width: Math.max(10, size * 0.3), height: Math.max(10, size * 0.3) }}
-        />
-      )}
-      {bot && <span className="absolute -left-1 -top-1 rounded-sm bg-brass px-0.5 font-mono text-[8px] font-semibold leading-tight text-paper">BOT</span>}
+      {st && <span className={`absolute -bottom-0.5 -right-0.5 block rounded-full border-2 border-paper-hi ${DOT[st]}`} style={{ width: Math.max(9, size * 0.3), height: Math.max(9, size * 0.3) }} />}
+      {bot && <span className="absolute -left-1 -top-1 rounded-sm bg-brass px-0.5 font-pixel text-[7px] leading-tight text-paper-hi">BOT</span>}
     </span>
   )
 }
@@ -220,21 +252,20 @@ export function Dialog({ open, onClose, title, children, wide }: { open: boolean
       aria-labelledby={titleId}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
-      className={`m-auto w-[min(92vw,${wide ? '40rem' : '28rem'})] max-h-[85vh] overflow-hidden rounded-xl border border-line bg-card p-0 text-ink shadow-2xl backdrop:bg-[#0b1020]/50 backdrop:backdrop-blur-[2px]`}
+      className="window m-auto max-h-[85vh] border-0 p-0 text-ink backdrop:bg-[#0b1020]/45 backdrop:backdrop-blur-[2px]"
       style={{ width: `min(92vw, ${wide ? '40rem' : '28rem'})` }}
     >
       {open && (
         <div className="flex max-h-[85vh] flex-col">
-          <div className="airmail h-1.5 shrink-0" />
-          <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
-            <h2 id={titleId} className="font-display text-xl font-semibold">
+          <div className="titlebar flex h-10 shrink-0 items-center justify-between gap-3 pl-4 pr-1.5">
+            <h2 id={titleId} className="truncate text-[0.95rem] font-extrabold">
               {title}
             </h2>
-            <Btn tip="Close" iconOnly variant="plain" size="sm" onClick={onClose}>
-              <X size={18} aria-hidden="true" />
+            <Btn tip="Close" iconOnly variant="plain" size="xs" className="chrome-btn close !h-6 !rounded-full" onClick={onClose}>
+              <X size={14} aria-hidden="true" />
             </Btn>
           </div>
-          <div className="scroll-thin overflow-y-auto px-5 pb-5">{children}</div>
+          <div className="scroll-thin overflow-y-auto px-5 pb-5 pt-4">{children}</div>
         </div>
       )}
     </dialog>
@@ -265,7 +296,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <p
             key={t.id}
             role={t.tone === 'bad' ? 'alert' : 'status'}
-            className={`stamp-in pointer-events-auto max-w-md rounded-lg border px-4 py-2 text-sm font-medium shadow-lg ${t.tone === 'bad' ? 'border-bad bg-bad-bg text-bad' : 'border-good bg-card text-good'}`}
+            className={`stamp-in pointer-events-auto max-w-md rounded-xl border px-4 py-2 text-sm font-semibold shadow-lg ${t.tone === 'bad' ? 'border-bad bg-bad-bg text-bad' : 'border-good bg-card text-good'}`}
           >
             {t.text}
           </p>
@@ -281,33 +312,50 @@ export function useToast() {
 
 /* ------------------------------------------------------------------ misc */
 
+/** Buddyline's mark: two overlapping glossy chat bubbles with a spark. Original artwork. */
+export function Logo({ size = '1.5em' }: { size?: string | number }) {
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true">
+      <defs>
+        <linearGradient id="bl-a" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#8fd3ff" />
+          <stop offset="1" stopColor="#2a66e8" />
+        </linearGradient>
+        <linearGradient id="bl-b" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffb0dc" />
+          <stop offset="1" stopColor="#d61f86" />
+        </linearGradient>
+      </defs>
+      <path d="M26 14h24a10 10 0 0 1 10 10v10a10 10 0 0 1-10 10h-2l1 8-9-8H26a10 10 0 0 1-10-10V24a10 10 0 0 1 10-10z" fill="url(#bl-b)" />
+      <path d="M14 6h22a10 10 0 0 1 10 10v10a10 10 0 0 1-10 10H22l-9 8 1-8a10 10 0 0 1-10-10V16A10 10 0 0 1 14 6z" fill="url(#bl-a)" stroke="#fff" strokeWidth="2" />
+      <path d="M10 13a6 6 0 0 1 6-4h18a6 6 0 0 1 6 4" fill="none" stroke="#fff" strokeOpacity="0.7" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="18" cy="21" r="2.6" fill="#fff" />
+      <circle cx="26" cy="21" r="2.6" fill="#fff" />
+      <circle cx="34" cy="21" r="2.6" fill="#fff" />
+      <path d="M54 2l1.6 4.4L60 8l-4.4 1.6L54 14l-1.6-4.4L48 8l4.4-1.6z" fill="#ffd23f" />
+    </svg>
+  )
+}
+
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 font-display font-bold tracking-tight ${className}`}>
-      <svg viewBox="0 0 64 64" width="1.4em" height="1.4em" aria-hidden="true">
-        <rect x="4" y="12" width="56" height="40" rx="6" fill="var(--red)" />
-        <rect x="4" y="12" width="56" height="40" rx="6" fill="url(#ag-stripe)" />
-        <defs>
-          <pattern id="ag-stripe" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <rect width="4" height="12" fill="var(--red)" />
-            <rect x="4" width="2" height="12" fill="var(--paper-hi)" />
-            <rect x="6" width="4" height="12" fill="var(--blue)" />
-            <rect x="10" width="2" height="12" fill="var(--paper-hi)" />
-          </pattern>
-        </defs>
-        <rect x="9" y="17" width="46" height="30" rx="3" fill="var(--paper-hi)" />
-        <path d="M12 20l20 14 20-14" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinejoin="round" />
-      </svg>
-      Aerogram
+    <span className={`inline-flex items-center gap-2 font-extrabold tracking-tight ${className}`}>
+      <Logo />
+      <span>
+        Buddy<span className="text-red">line</span>
+      </span>
     </span>
   )
 }
 
-/** A perforated "#" stamp for public rooms. */
+/** Round "#" badge for public rooms. */
 export function RoomStamp({ size = 36, active = true }: { size?: number; active?: boolean }) {
   return (
     <span className="stamp block shrink-0" style={{ width: size, height: size }} aria-hidden="true">
-      <span className={`flex h-full w-full items-center justify-center font-display font-bold ${active ? 'bg-blue text-on-accent' : 'bg-sunk text-blue'}`} style={{ fontSize: size * 0.45 }}>
+      <span
+        className={`flex h-full w-full items-center justify-center font-extrabold ${active ? 'text-white' : 'bg-sunk text-blue'}`}
+        style={{ fontSize: size * 0.48, background: active ? 'linear-gradient(160deg, #c9a6ff, #7238e0)' : undefined }}
+      >
         #
       </span>
     </span>

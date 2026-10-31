@@ -1,19 +1,42 @@
-import { useEffect, useRef, useState } from 'react'
-import { FileText, Paperclip, Send, Smile, X } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Bold, FileText, Italic, Paperclip, Send, Smile, Sticker, Underline, X, Zap } from 'lucide-react'
 import { ACCEPT, formatBytes, isImage, validateFile } from '../lib/logic'
+import { SMILEYS, STYLE_COLORS, cleanStyle, styleClass, typingStateFor, type TypingState } from '../lib/im'
+import type { MsgStyle, StyleColor } from '../lib/types'
 import { EmojiGrid } from './Emoji'
+import { Smiley } from './Smiley'
 import { Btn, useToast } from './ui'
 
 interface Props {
   roomName: string
   disabled?: boolean
-  onSend: (body: string, file: File | null) => void
-  onTyping: (on: boolean) => void
+  autoFocus?: boolean
+  onSend: (body: string, file: File | null, style: MsgStyle | null) => void
+  onTyping: (on: boolean, state?: TypingState) => void
+  /** DMs only: send a Buzz that shakes the other person's window. */
+  onBuzz?: () => void
 }
 
-/** The writing desk: autosizing textarea, emoji, attachments (button, paste, drop), Enter to send. */
-export function Composer({ roomName, disabled, onSend, onTyping }: Props) {
+const STYLE_KEY = 'buddyline:style'
+const BUZZ_COOLDOWN = 10_000
+const COLOR_NAME: Record<StyleColor, string> = { red: 'Cherry', orange: 'Tangerine', green: 'Lime', teal: 'Aqua', blue: 'Cobalt', purple: 'Grape', pink: 'Bubblegum' }
+
+function loadStyle(): MsgStyle {
+  try {
+    return cleanStyle(JSON.parse(localStorage.getItem(STYLE_KEY) || '{}')) ?? {}
+  } catch {
+    return {}
+  }
+}
+
+/** The IM box: formatting toolbar, smileys, emoji, attachments (button, paste, drop), Buzz, Enter to send. */
+export function Composer({ roomName, disabled, autoFocus, onSend, onTyping, onBuzz }: Props) {
+  const id = useId()
   const [text, setText] = useState('')
+  const [style, setStyle] = useState<MsgStyle>(loadStyle)
+  const [pop, setPop] = useState<null | 'color' | 'smiley'>(null)
+  const [buzzAt, setBuzzAt] = useState(0)
+  const [, tick] = useState(0)
   const [picked, setPicked] = useState<{ file: File; url: string | null } | null>(null)
   const file = picked?.file ?? null
   const preview = picked?.url ?? null
@@ -22,7 +45,46 @@ export function Composer({ roomName, disabled, onSend, onTyping }: Props) {
   const ta = useRef<HTMLTextAreaElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const lastPing = useRef(0)
+  const lastKey = useRef(0)
+  const sentState = useRef<TypingState | null>(null)
   const toast = useToast()
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STYLE_KEY, JSON.stringify(cleanStyle(style) ?? {}))
+    } catch {
+      /* ignore */
+    }
+  }, [style])
+
+  useEffect(() => {
+    if (autoFocus && matchMedia('(pointer: fine)').matches) ta.current?.focus({ preventScroll: true })
+  }, [autoFocus])
+
+  // "has entered text": after a few seconds without keystrokes the state flips, and is re-sent
+  // now and then so it doesn't expire on the other side while the draft sits there.
+  useEffect(() => {
+    if (!text.trim()) return
+    const t = window.setInterval(() => {
+      const now = Date.now()
+      const st = typingStateFor(text, now - lastKey.current)
+      if (!st) return
+      const gap = st === 'typing' ? 2000 : 10_000
+      if (st !== sentState.current || now - lastPing.current > gap) {
+        sentState.current = st
+        lastPing.current = now
+        onTyping(true, st)
+      }
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [text, onTyping])
+
+  // Re-render while the Buzz cooldown runs so the button re-enables itself.
+  useEffect(() => {
+    if (!buzzAt) return
+    const t = window.setTimeout(() => tick((n) => n + 1), BUZZ_COOLDOWN + 50)
+    return () => window.clearTimeout(t)
+  }, [buzzAt])
 
   useEffect(() => {
     const t = ta.current
@@ -51,30 +113,50 @@ export function Composer({ roomName, disabled, onSend, onTyping }: Props) {
   function change(v: string) {
     setText(v)
     const now = Date.now()
-    if (v.trim() && now - lastPing.current > 2000) {
+    lastKey.current = now
+    if (v.trim() && (now - lastPing.current > 2000 || sentState.current !== 'typing')) {
       lastPing.current = now
-      onTyping(true)
+      sentState.current = 'typing'
+      onTyping(true, 'typing')
     } else if (!v.trim() && lastPing.current) {
-      lastPing.current = 0
-      onTyping(false)
+      stopTyping()
     }
   }
+
+  function stopTyping() {
+    lastPing.current = 0
+    sentState.current = null
+    onTyping(false)
+  }
+
+  function insert(snippet: string) {
+    const t = ta.current
+    const at = t?.selectionStart ?? text.length
+    const end = t?.selectionEnd ?? at
+    const pre = text.slice(0, at)
+    const add = (pre && !/\s$/.test(pre) ? ' ' : '') + snippet + ' '
+    change(pre + add + text.slice(end))
+    requestAnimationFrame(() => (t?.focus(), t?.setSelectionRange(at + add.length, at + add.length)))
+  }
+
+  const toggle = (k: 'b' | 'i' | 'u') => setStyle((s) => ({ ...s, [k]: !s[k] }))
+
+  const buzzWait = buzzAt && Date.now() - buzzAt < BUZZ_COOLDOWN
 
   function send() {
     const body = text.trim()
     if ((!body && !file) || disabled) return
-    onSend(body, file)
+    onSend(body, file, body ? cleanStyle(style) : null)
     setText('')
     setFile(null)
-    lastPing.current = 0
-    onTyping(false)
+    stopTyping()
     ta.current?.focus()
   }
 
   const canSend = (!!text.trim() || !!file) && !disabled
   return (
     <div
-      className={`relative border-t border-line bg-paper-hi px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-5 ${drag ? 'ring-2 ring-inset ring-blue' : ''}`}
+      className={`relative border-t border-line bg-paper px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 ${drag ? 'ring-2 ring-inset ring-blue' : ''}`}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return
         e.preventDefault()
@@ -106,43 +188,143 @@ export function Composer({ roomName, disabled, onSend, onTyping }: Props) {
           </Btn>
         </div>
       )}
-      <div className="flex items-end gap-1.5">
-        <input ref={input} type="file" accept={ACCEPT} className="hidden" aria-hidden="true" tabIndex={-1} onChange={(e) => (pick(e.target.files?.[0]), (e.target.value = ''))} />
-        <Btn tip="Attach an image or file (5 MB max)" iconOnly variant="plain" disabled={disabled} onClick={() => input.current?.click()}>
-          <Paperclip size={19} aria-hidden="true" />
+      <div className="relative mb-1 flex flex-wrap items-center gap-0.5" role="toolbar" aria-label="Formatting">
+        <Btn tip="Bold" iconOnly size="xs" variant={style.b ? 'blue' : 'plain'} aria-pressed={!!style.b} disabled={disabled} onClick={() => toggle('b')}>
+          <Bold size={14} aria-hidden="true" />
         </Btn>
-        <div className="relative">
-          <Btn tip="Insert an emoji" iconOnly variant="plain" disabled={disabled} aria-expanded={emoji} onClick={() => setEmoji((v) => !v)}>
-            <Smile size={19} aria-hidden="true" />
+        <Btn tip="Italic" iconOnly size="xs" variant={style.i ? 'blue' : 'plain'} aria-pressed={!!style.i} disabled={disabled} onClick={() => toggle('i')}>
+          <Italic size={14} aria-hidden="true" />
+        </Btn>
+        <Btn tip="Underline" iconOnly size="xs" variant={style.u ? 'blue' : 'plain'} aria-pressed={!!style.u} disabled={disabled} onClick={() => toggle('u')}>
+          <Underline size={14} aria-hidden="true" />
+        </Btn>
+        <Btn tip="Text colour" iconOnly size="xs" variant="plain" aria-expanded={pop === 'color'} disabled={disabled} onClick={() => setPop((p) => (p === 'color' ? null : 'color'))}>
+          <span className={`text-sm font-black ${style.color ? `fmt-${style.color}` : ''}`} aria-hidden="true">
+            A
+          </span>
+          <span className="absolute inset-x-1.5 bottom-1 h-[3px] rounded-full" style={{ background: style.color ? `var(--s-${style.color})` : 'var(--ink)' }} aria-hidden="true" />
+        </Btn>
+        <Btn
+          tip="Smaller text"
+          iconOnly
+          size="xs"
+          variant={style.size === 's' ? 'blue' : 'plain'}
+          aria-pressed={style.size === 's'}
+          disabled={disabled}
+          onClick={() => setStyle((s) => ({ ...s, size: s.size === 's' ? undefined : 's' }))}
+        >
+          <span className="text-[10px] font-black" aria-hidden="true">
+            A-
+          </span>
+        </Btn>
+        <Btn
+          tip="Bigger text"
+          iconOnly
+          size="xs"
+          variant={style.size === 'l' ? 'blue' : 'plain'}
+          aria-pressed={style.size === 'l'}
+          disabled={disabled}
+          onClick={() => setStyle((s) => ({ ...s, size: s.size === 'l' ? undefined : 'l' }))}
+        >
+          <span className="text-[15px] font-black" aria-hidden="true">
+            A+
+          </span>
+        </Btn>
+        <span className="mx-1 h-4 w-px bg-line" aria-hidden="true" />
+        <Btn tip="Smileys" iconOnly size="xs" variant="plain" aria-expanded={pop === 'smiley'} disabled={disabled} onClick={() => setPop((p) => (p === 'smiley' ? null : 'smiley'))}>
+          <Sticker size={15} aria-hidden="true" />
+        </Btn>
+        <span className="relative">
+          <Btn tip="Insert an emoji" iconOnly size="xs" variant="plain" disabled={disabled} aria-expanded={emoji} onClick={() => setEmoji((v) => !v)}>
+            <Smile size={15} aria-hidden="true" />
           </Btn>
           {emoji && (
             <EmojiGrid
               label="Insert an emoji"
-              className="bottom-12 left-0"
+              className="bottom-9 left-0"
               onClose={() => setEmoji(false)}
               onPick={(e) => {
-                const t = ta.current
-                const at = t?.selectionStart ?? text.length
-                change(text.slice(0, at) + e + text.slice(t?.selectionEnd ?? at))
+                insert(e)
                 setEmoji(false)
-                requestAnimationFrame(() => (t?.focus(), t?.setSelectionRange(at + e.length, at + e.length)))
               }}
             />
           )}
-        </div>
-        <label htmlFor="composer" className="sr-only">
+        </span>
+        <Btn tip="Send an image or file (5 MB max)" iconOnly size="xs" variant="plain" disabled={disabled} onClick={() => input.current?.click()}>
+          <Paperclip size={15} aria-hidden="true" />
+        </Btn>
+        {onBuzz && (
+          <Btn
+            tip={buzzWait ? 'Buzz is cooling down…' : 'Buzz! Shake their window'}
+            size="xs"
+            variant="plain"
+            className="ml-auto !font-pixel !text-[10px] text-brass"
+            disabled={disabled || !!buzzWait}
+            onClick={() => {
+              setBuzzAt(Date.now())
+              onBuzz()
+            }}
+          >
+            <Zap size={14} aria-hidden="true" /> Buzz
+          </Btn>
+        )}
+        {pop === 'color' && (
+          <div
+            className="pop absolute bottom-9 left-16 z-20 flex gap-1 rounded-xl border border-line bg-card p-1.5 shadow-lg"
+            role="group"
+            aria-label="Text colour"
+            onKeyDown={(e) => e.key === 'Escape' && setPop(null)}
+          >
+            <Btn tip="Default colour" iconOnly size="xs" variant={!style.color ? 'blue' : 'plain'} onClick={() => (setStyle((s) => ({ ...s, color: undefined })), setPop(null))}>
+              <span className="h-4 w-4 rounded-full border border-edge bg-ink" aria-hidden="true" />
+            </Btn>
+            {STYLE_COLORS.map((c) => (
+              <Btn key={c} tip={COLOR_NAME[c]} iconOnly size="xs" variant={style.color === c ? 'blue' : 'plain'} onClick={() => (setStyle((s) => ({ ...s, color: c })), setPop(null))}>
+                <span className="h-4 w-4 rounded-full border border-white/60" style={{ background: `var(--s-${c})` }} aria-hidden="true" />
+              </Btn>
+            ))}
+          </div>
+        )}
+        {pop === 'smiley' && (
+          <div
+            className="pop absolute bottom-9 left-0 z-20 grid w-[15.5rem] grid-cols-7 gap-0.5 rounded-xl border border-line bg-card p-1.5 shadow-lg"
+            role="group"
+            aria-label="Smileys"
+            onKeyDown={(e) => e.key === 'Escape' && setPop(null)}
+          >
+            {SMILEYS.map((sm) => (
+              <Btn
+                key={sm.id}
+                tip={`${sm.label}  ${sm.code}`}
+                iconOnly
+                size="sm"
+                variant="plain"
+                onClick={() => {
+                  insert(sm.code)
+                  setPop(null)
+                }}
+              >
+                <Smiley id={sm.id} size={22} />
+              </Btn>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex items-end gap-1.5">
+        <input ref={input} type="file" accept={ACCEPT} className="hidden" aria-hidden="true" tabIndex={-1} onChange={(e) => (pick(e.target.files?.[0]), (e.target.value = ''))} />
+        <label htmlFor={id} className="sr-only">
           Message {roomName}
         </label>
         <textarea
-          id="composer"
+          id={id}
           ref={ta}
-          rows={1}
+          rows={2}
           value={text}
           maxLength={4000}
           disabled={disabled}
-          placeholder={`Write to ${roomName}…`}
+          placeholder={`Send an IM to ${roomName}…`}
           onChange={(e) => change(e.target.value)}
-          onBlur={() => lastPing.current && (onTyping(false), (lastPing.current = 0))}
+          onBlur={() => lastPing.current && !text.trim() && stopTyping()}
           onPaste={(e) => {
             const f = [...e.clipboardData.files][0]
             if (!f) return
@@ -150,14 +332,18 @@ export function Composer({ roomName, disabled, onSend, onTyping }: Props) {
             pick(f)
           }}
           onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && ['b', 'i', 'u'].includes(e.key.toLowerCase())) {
+              e.preventDefault()
+              return toggle(e.key.toLowerCase() as 'b' | 'i' | 'u')
+            }
             if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return
             e.preventDefault()
             send()
           }}
-          className="scroll-thin min-h-10 flex-1 resize-none rounded-lg border border-line bg-card px-3 py-2 text-[0.95rem] leading-snug outline-none transition-colors placeholder:text-muted focus:border-blue disabled:opacity-60"
+          className={`scroll-thin min-h-12 flex-1 resize-none rounded-xl border border-line bg-card px-3 py-2 text-[0.95rem] leading-snug outline-none transition-colors placeholder:text-muted focus:border-blue disabled:opacity-60 ${styleClass(cleanStyle(style))}`}
         />
-        <Btn tip={canSend ? 'Send (Enter) · Shift+Enter for a new line' : 'Write something to send'} iconOnly variant="red" disabled={!canSend} onClick={send} className="disabled:opacity-50">
-          <Send size={18} aria-hidden="true" />
+        <Btn tip={canSend ? 'Send (Enter) · Shift+Enter for a new line' : 'Type something to send'} variant="red" disabled={!canSend} onClick={send} className="!h-12 disabled:opacity-50">
+          <Send size={16} aria-hidden="true" /> <span className="hidden sm:inline">Send</span>
         </Btn>
       </div>
     </div>

@@ -6,7 +6,6 @@ import {
   isEmojiOnly,
   lastOwnMessage,
   linkify,
-  liveTypists,
   markFailed,
   mergeMessages,
   readersOf,
@@ -16,7 +15,6 @@ import {
   storagePath,
   toggleReaction,
   totalUnread,
-  typingText,
   validateFile,
 } from './logic'
 import type { Member, Message, RoomSummary } from './types'
@@ -111,18 +109,6 @@ describe('unread + receipts', () => {
     expect(mine.id).toBe('x')
     expect(readersOf(members, mine, A).map((m) => m.user_id)).toEqual([B])
     expect(readersOf(members, { ...mine, created_at: '2026-10-31T10:00:05Z' }, A)).toEqual([])
-  })
-})
-
-describe('typing', () => {
-  it('describes who is writing', () => {
-    expect(typingText([])).toBe('')
-    expect(typingText(['Pip'])).toBe('Pip is writing…')
-    expect(typingText(['Pip', 'Hana'])).toBe('Pip and Hana are writing…')
-    expect(typingText(['a', 'b', 'c', 'd'])).toBe('a, b and 2 more are writing…')
-  })
-  it('expires stale typists', () => {
-    expect(liveTypists({ a: { name: 'A', at: 1000 }, b: { name: 'B', at: 4500 } }, 6000)).toEqual([{ id: 'b', name: 'B' }])
   })
 })
 

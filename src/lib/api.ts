@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normMember, normMessage, normRoom, storagePath } from './logic'
-import type { Attachment, Member, Message, Profile, PublicRoom, Reactions, RoomSummary } from './types'
+import type { Attachment, BuddyListData, Member, Message, Profile, PublicRoom, Reactions, RoomSummary } from './types'
 
 export const PAGE = 40
 const BUCKET = 'chat-files'
@@ -67,8 +67,50 @@ export async function messages(db: SupabaseClient, room: string, before?: Pick<M
   return rows.reverse().map(normMessage)
 }
 
-export async function sendMessage(db: SupabaseClient, m: Pick<Message, 'id' | 'room_id' | 'user_id' | 'body' | 'attachment'>): Promise<Message> {
-  return normMessage(check(await db.from('chat_messages').insert(m).select('*').single()))
+export async function sendMessage(db: SupabaseClient, m: Pick<Message, 'id' | 'room_id' | 'user_id' | 'body' | 'attachment' | 'style' | 'kind'>): Promise<Message> {
+  const row: Record<string, unknown> = { id: m.id, room_id: m.room_id, user_id: m.user_id, body: m.body, attachment: m.attachment }
+  if (m.style) row.style = m.style
+  if (m.kind && m.kind !== 'text') row.kind = m.kind
+  return normMessage(check(await db.from('chat_messages').insert(row).select('*').single()))
+}
+
+/* ------------------------------------------------------------------ status + buddy list */
+
+export async function setPresence(db: SupabaseClient, status: 'online' | 'away', away: string | null, idle: boolean): Promise<Profile> {
+  return check(await db.rpc('chat_set_presence', { p_status: status, p_away_message: away, p_idle: idle })) as Profile
+}
+
+export async function awayPresets(db: SupabaseClient): Promise<string[]> {
+  return (check(await db.rpc('chat_away_presets')) as string[] | null) ?? []
+}
+
+export async function saveAwayPresets(db: SupabaseClient, list: string[]): Promise<string[]> {
+  return (check(await db.rpc('chat_save_away_presets', { p_presets: list })) as string[] | null) ?? []
+}
+
+export async function buddyList(db: SupabaseClient): Promise<BuddyListData> {
+  const r = check(await db.rpc('chat_buddy_list')) as BuddyListData | null
+  return { groups: r?.groups ?? [], buddies: r?.buddies ?? [] }
+}
+
+export async function addBuddy(db: SupabaseClient, screenName: string, group: string | null): Promise<string> {
+  return check(await db.rpc('chat_add_buddy', { p_screen_name: screenName, p_group: group }))
+}
+
+export async function removeBuddy(db: SupabaseClient, buddy: string) {
+  check(await db.rpc('chat_remove_buddy', { p_buddy: buddy }))
+}
+
+export async function moveBuddy(db: SupabaseClient, buddy: string, group: string) {
+  check(await db.rpc('chat_move_buddy', { p_buddy: buddy, p_group: group }))
+}
+
+export async function saveGroup(db: SupabaseClient, name: string, id: string | null): Promise<string> {
+  return check(await db.rpc('chat_save_group', { p_name: name, p_id: id }))
+}
+
+export async function deleteGroup(db: SupabaseClient, id: string) {
+  check(await db.rpc('chat_delete_group', { p_id: id }))
 }
 
 export async function editMessage(db: SupabaseClient, id: string, body: string): Promise<Message> {

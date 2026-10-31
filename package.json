@@ -1,5 +1,5 @@
 {
-  "name": "aerogram",
+  "name": "buddyline",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -14,11 +14,13 @@
     "test:e2e": "playwright test",
     "test:live": "node scripts/two-sessions.mjs"
   },
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
-    "@fontsource-variable/fraunces": "^5.3.0",
-    "@fontsource-variable/public-sans": "^5.3.0",
+    "@fontsource-variable/nunito": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/silkscreen": "^5.3.0",
     "@supabase/supabase-js": "^2.118.0",
     "lucide-react": "^1.65.0",
     "react": "^19.3.1",

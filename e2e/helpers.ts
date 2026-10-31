@@ -7,5 +7,5 @@ export async function expectAxeClean(page: Page) {
 }
 
 export async function setTheme(page: Page, theme: 'light' | 'dark') {
-  await page.addInitScript((t) => localStorage.setItem('aerogram:theme', t), theme)
+  await page.addInitScript((t) => localStorage.setItem('buddyline:theme', t), theme)
 }

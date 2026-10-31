@@ -3,10 +3,12 @@ import { Check, Copy, FileText, Pencil, RotateCw, SmilePlus, Trash2, X, Download
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fileUrl } from '../lib/api'
 import { clock, formatBytes, isEmojiOnly, isImage, linkify } from '../lib/logic'
+import { expandAway, splitSmileys, styleClass, SMILEYS } from '../lib/im'
+import { Smiley } from './Smiley'
 import type { Message, Profile } from '../lib/types'
 import { EmojiGrid } from './Emoji'
 import { QUICK } from '../lib/emoji'
-import { Btn, Stamp, Tip, inkDot } from './ui'
+import { Btn, Tip, inkDot } from './ui'
 
 interface Props {
   db: SupabaseClient
@@ -14,7 +16,6 @@ interface Props {
   author: Profile | undefined
   me: string
   first: boolean
-  online: boolean
   profiles: Record<string, Profile>
   selected: boolean
   onSelect: (id: string | null) => void
@@ -100,12 +101,31 @@ function Attachment({ db, m }: { db: SupabaseClient; m: Message }) {
   )
 }
 
+const SMILEY_LABEL = Object.fromEntries(SMILEYS.map((s) => [s.id, s.label]))
+
+/** Message text with links and :) style smileys rendered inline. */
+export function RichText({ text }: { text: string }) {
+  return (
+    <>
+      {linkify(text).map((p, i) =>
+        p.href ? (
+          <a key={i} href={p.href} target="_blank" rel="noreferrer noopener nofollow" className="font-semibold text-blue underline decoration-1 underline-offset-2">
+            {p.text}
+          </a>
+        ) : (
+          splitSmileys(p.text).map((q, j) => ('smiley' in q ? <Smiley key={`${i}-${j}`} id={q.smiley} title={`${SMILEY_LABEL[q.smiley]} ${q.code}`} /> : <span key={`${i}-${j}`}>{q.text}</span>))
+        ),
+      )}
+    </>
+  )
+}
+
 function names(ids: string[], profiles: Record<string, Profile>, me: string) {
   const list = ids.map((id) => (id === me ? 'You' : (profiles[id]?.display_name ?? 'Someone')))
   return list.length > 3 ? `${list.slice(0, 3).join(', ')} and ${list.length - 3} more` : list.join(', ')
 }
 
-export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, first, online, profiles, selected, onSelect, onReact, onEdit, onDelete, onRetry, onDiscard }: Props) {
+export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, first, profiles, selected, onSelect, onReact, onEdit, onDelete, onRetry, onDiscard }: Props) {
   const mine = m.user_id === me
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(m.body)
@@ -131,129 +151,137 @@ export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, f
     if (await onEdit(m, body)) setEditing(false)
   }
 
-  const showBar = !deleted && !editing && !m.pending && !m.failed
+  const showBar = !deleted && !editing && !m.pending && !m.failed && m.kind !== 'buzz'
+  const nameCls = mine ? 'text-red' : 'text-blue'
+
+  if (m.kind === 'buzz')
+    return (
+      <div data-msg={m.id} className="arrive my-1.5 flex justify-center px-3">
+        <span className="postmark inline-flex items-center gap-1.5 px-3 py-0.5 text-[11px] text-red">
+          <span aria-hidden="true">⚡</span> {mine ? 'You sent a Buzz!' : `${name} buzzed you!`}
+          <time dateTime={m.created_at} className="text-muted">
+            {clock(m.created_at)}
+          </time>
+        </span>
+      </div>
+    )
+
   return (
     <div
       data-msg={m.id}
-      className={`group relative flex gap-3 px-3 sm:px-5 ${first ? 'mt-3' : 'mt-0.5'} ${mine ? 'flex-row-reverse' : ''} ${m.pending ? '' : ''}`}
+      data-kind={m.kind}
+      className={`group relative px-3 py-[3px] hover:bg-sunk/70 sm:px-4 ${first ? 'mt-1' : ''} ${selected ? 'bg-sunk/70' : ''}`}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest('button,a,textarea')) return
         if (matchMedia('(hover: none)').matches) onSelect(selected ? null : m.id)
       }}
     >
-      <div className="w-9 shrink-0">{first && !mine && <Stamp name={name} stamp={author?.stamp ?? 0} size={36} online={online} bot={author?.is_bot} />}</div>
-      <div className={`flex min-w-0 max-w-[min(36rem,82%)] flex-col ${mine ? 'items-end' : 'items-start'}`}>
-        {first && (
-          <div className={`mb-0.5 flex items-baseline gap-2 px-1 ${mine ? 'flex-row-reverse' : ''}`}>
-            <span className="text-sm font-semibold">{mine ? 'You' : name}</span>
-            <time dateTime={m.created_at} className="font-mono text-[11px] text-muted">
-              {clock(m.created_at)}
+      <div className={`min-w-0 text-[0.95rem] leading-snug ${m.pending && !m.attachment ? 'opacity-70' : ''}`}>
+        {m.kind === 'away' ? (
+          <span className={`font-extrabold ${nameCls}`}>
+            Auto response from {name}
+            <span className="ml-1 font-normal text-muted">({clock(m.created_at)})</span>:{' '}
+          </span>
+        ) : (
+          <span className={`font-extrabold ${nameCls}`}>
+            {name}
+            {author?.is_bot && <span className="ml-1 rounded bg-brass px-1 align-[0.15em] font-pixel text-[8px] font-normal text-paper-hi">BOT</span>}
+            <time dateTime={m.created_at} className="ml-1 text-[11px] font-semibold text-muted">
+              ({clock(m.created_at)})
             </time>
-          </div>
-        )}
-        <div
-          data-first={first}
-          className={`${big || (m.attachment && !m.body && !deleted) ? '' : mine ? 'letter-mine' : 'letter-theirs'} ${big ? '' : 'rounded-lg px-3 py-1.5'} ${!big && first ? (mine ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''} ${m.pending && !m.attachment ? 'opacity-75' : ''} ${m.failed ? '!border-bad' : ''} relative max-w-full`}
-        >
-          {deleted ? (
-            <p className="font-display text-sm italic text-muted">✉ This letter was withdrawn.</p>
-          ) : editing ? (
-            <div className="w-[min(30rem,70vw)]">
-              <label className="sr-only" htmlFor={`edit-${m.id}`}>
-                Edit message
-              </label>
-              <textarea
-                id={`edit-${m.id}`}
-                ref={editRef}
-                value={draft}
-                maxLength={4000}
-                rows={Math.min(8, Math.max(2, draft.split('\n').length))}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    save()
-                  } else if (e.key === 'Escape') {
-                    e.stopPropagation()
-                    setEditing(false)
-                    setDraft(m.body)
-                  }
-                }}
-                className="w-full resize-none rounded-md border border-edge bg-card p-2 text-[0.95rem] outline-none focus:border-blue"
-              />
-              <div className="mt-1 flex items-center justify-end gap-1.5">
-                <span className="mr-auto text-xs text-muted">Enter to save · Esc to cancel</span>
-                <Btn tip="Discard changes" size="xs" variant="plain" onClick={() => (setEditing(false), setDraft(m.body))}>
-                  <X size={14} aria-hidden="true" /> Cancel
-                </Btn>
-                <Btn tip="Save the edited message" size="xs" variant="blue" onClick={save}>
-                  <Check size={14} aria-hidden="true" /> Save
-                </Btn>
-              </div>
-            </div>
-          ) : (
-            <>
-              {m.body && (
-                <p className={`whitespace-pre-wrap break-words ${big ? 'text-4xl leading-tight' : 'text-[0.95rem] leading-relaxed'}`}>
-                  {linkify(m.body).map((p, i) =>
-                    p.href ? (
-                      <a key={i} href={p.href} target="_blank" rel="noreferrer noopener nofollow" className="font-medium text-blue underline decoration-1 underline-offset-2">
-                        {p.text}
-                      </a>
-                    ) : (
-                      <span key={i}>{p.text}</span>
-                    ),
-                  )}
-                  {m.edited_at && <span className="ml-1.5 font-mono text-[10px] uppercase tracking-wider text-muted">(edited)</span>}
-                </p>
-              )}
-              {m.attachment && <Attachment db={db} m={m} />}
-            </>
-          )}
-        </div>
-
-        {m.pending && <span className="mt-0.5 px-1 font-mono text-[10px] uppercase tracking-wider text-muted">Sending…</span>}
-        {m.failed && (
-          <span className="mt-1 flex items-center gap-1.5 px-1 text-xs text-bad" role="alert">
-            Not sent: {m.failed}
-            <Btn tip="Try sending this again" size="xs" variant="danger" onClick={() => onRetry(m)}>
-              <RotateCw size={12} aria-hidden="true" /> Retry
-            </Btn>
-            <Btn tip="Remove this unsent message" size="xs" variant="plain" onClick={() => onDiscard(m)}>
-              Discard
-            </Btn>
+            :{' '}
           </span>
         )}
-
-        {reactions.length > 0 && !deleted && (
-          <div className={`mt-1 flex flex-wrap gap-1 ${mine ? 'justify-end' : ''}`}>
-            {reactions.map(([e, users]) => {
-              const on = users.includes(me)
-              return (
-                <Btn
-                  key={e}
-                  tip={`${names(users, profiles, me)} reacted ${e}${on ? ' · click to remove yours' : ''}`}
-                  size="xs"
-                  variant="plain"
-                  aria-pressed={on}
-                  aria-label={`${e} ${users.length}, ${on ? 'remove your reaction' : 'add your reaction'}`}
-                  onClick={() => onReact(m, e)}
-                  className={`pop !h-6 !rounded-full !border px-2 ${on ? '!border-blue bg-mine text-blue' : '!border-line bg-card'}`}
-                >
-                  <span className="text-sm">{e}</span>
-                  <span className="font-mono text-[11px] font-semibold">{users.length}</span>
-                </Btn>
-              )
-            })}
+        {deleted ? (
+          <span className="italic text-muted">message deleted</span>
+        ) : editing ? (
+          <div className="mt-1">
+            <label className="sr-only" htmlFor={`edit-${m.id}`}>
+              Edit message
+            </label>
+            <textarea
+              id={`edit-${m.id}`}
+              ref={editRef}
+              value={draft}
+              maxLength={4000}
+              rows={Math.min(8, Math.max(2, draft.split('\n').length))}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  save()
+                } else if (e.key === 'Escape') {
+                  e.stopPropagation()
+                  setEditing(false)
+                  setDraft(m.body)
+                }
+              }}
+              className="w-full resize-none rounded-md border border-edge bg-card p-2 text-[0.95rem] outline-none focus:border-blue"
+            />
+            <div className="mt-1 flex items-center justify-end gap-1.5">
+              <span className="mr-auto text-xs text-muted">Enter to save · Esc to cancel</span>
+              <Btn tip="Discard changes" size="xs" variant="plain" onClick={() => (setEditing(false), setDraft(m.body))}>
+                <X size={14} aria-hidden="true" /> Cancel
+              </Btn>
+              <Btn tip="Save the edited message" size="xs" variant="blue" onClick={save}>
+                <Check size={14} aria-hidden="true" /> Save
+              </Btn>
+            </div>
           </div>
+        ) : (
+          <>
+            {m.body && (
+              <span className={`whitespace-pre-wrap break-words ${big ? 'text-3xl leading-tight' : ''} ${m.kind === 'away' ? 'italic' : ''} ${styleClass(m.style)}`}>
+                <RichText text={m.kind === 'away' ? expandAway(m.body, profiles[me]?.display_name ?? 'you', new Date(m.created_at)) : m.body} />
+              </span>
+            )}
+            {m.edited_at && <span className="ml-1.5 text-[11px] font-semibold text-muted">(edited)</span>}
+            {m.attachment && <Attachment db={db} m={m} />}
+          </>
         )}
       </div>
+
+      {m.pending && <span className="block text-[11px] font-semibold text-muted">Sending…</span>}
+      {m.failed && (
+        <span className="mt-1 flex items-center gap-1.5 text-xs text-bad" role="alert">
+          Not sent: {m.failed}
+          <Btn tip="Try sending this again" size="xs" variant="danger" onClick={() => onRetry(m)}>
+            <RotateCw size={12} aria-hidden="true" /> Retry
+          </Btn>
+          <Btn tip="Remove this unsent message" size="xs" variant="plain" onClick={() => onDiscard(m)}>
+            Discard
+          </Btn>
+        </span>
+      )}
+
+      {reactions.length > 0 && !deleted && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {reactions.map(([e, users]) => {
+            const on = users.includes(me)
+            return (
+              <Btn
+                key={e}
+                tip={`${names(users, profiles, me)} reacted ${e}${on ? ' · click to remove yours' : ''}`}
+                size="xs"
+                variant="plain"
+                aria-pressed={on}
+                aria-label={`${e} ${users.length}, ${on ? 'remove your reaction' : 'add your reaction'}`}
+                onClick={() => onReact(m, e)}
+                className={`pop !h-6 !rounded-full !border px-2 ${on ? '!border-blue bg-mine text-blue' : '!border-line bg-card'}`}
+              >
+                <span className="text-sm">{e}</span>
+                <span className="text-[11px] font-bold">{users.length}</span>
+              </Btn>
+            )
+          })}
+        </div>
+      )}
 
       {showBar && (
         <div
           role="toolbar"
           aria-label="Message actions"
-          className={`absolute -top-4 z-20 items-center gap-0.5 rounded-lg border border-line bg-card p-0.5 shadow-md ${mine ? 'left-3 sm:left-auto sm:right-[calc(min(36rem,82%)+4.5rem)]' : 'right-3'} ${selected || picker || confirm ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'}`}
+          className={`absolute -top-3.5 right-2 z-20 items-center gap-0.5 rounded-lg border border-line bg-card p-0.5 shadow-md ${selected || picker || confirm ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'}`}
         >
           {QUICK.slice(0, 3).map((e) => (
             <Btn key={e} tip={`React with ${e}`} iconOnly size="sm" variant="plain" onClick={() => onReact(m, e)} className="!h-7 text-base">
@@ -264,14 +292,14 @@ export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, f
             <Btn tip="More reactions" iconOnly size="sm" variant="plain" className="!h-7" aria-expanded={picker} onClick={() => setPicker((p) => !p)}>
               <SmilePlus size={16} aria-hidden="true" />
             </Btn>
-            {picker && <EmojiGrid label="React with an emoji" className={`top-9 ${mine ? 'left-0' : 'right-0'}`} onClose={() => setPicker(false)} onPick={(e) => (onReact(m, e), setPicker(false))} />}
+            {picker && <EmojiGrid label="React with an emoji" className="right-0 top-9" onClose={() => setPicker(false)} onPick={(e) => (onReact(m, e), setPicker(false))} />}
           </div>
           {m.body && (
             <Btn tip="Copy text" iconOnly size="sm" variant="plain" className="!h-7" onClick={() => navigator.clipboard?.writeText(m.body)}>
               <Copy size={15} aria-hidden="true" />
             </Btn>
           )}
-          {mine && m.body && (
+          {mine && m.body && m.kind === 'text' && (
             <Btn tip="Edit message" iconOnly size="sm" variant="plain" className="!h-7" onClick={() => (setDraft(m.body), setEditing(true), onSelect(null))}>
               <Pencil size={15} aria-hidden="true" />
             </Btn>
@@ -283,7 +311,7 @@ export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, f
               </Btn>
               {confirm && (
                 <div role="alertdialog" aria-label="Delete this message?" className="stamp-in absolute right-0 top-9 z-40 w-56 rounded-lg border border-line bg-card p-3 shadow-xl">
-                  <p className="text-sm font-semibold">Withdraw this letter?</p>
+                  <p className="text-sm font-bold">Delete this message?</p>
                   <p className="mt-0.5 text-xs text-muted">Everyone will see that it was deleted.{m.attachment ? ' The file is removed too.' : ''}</p>
                   <div className="mt-2 flex justify-end gap-1.5">
                     <Btn tip="Keep the message" size="xs" variant="plain" onClick={() => setConfirm(false)}>

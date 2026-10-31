@@ -1,68 +1,92 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/fraunces';
-@import '@fontsource-variable/public-sans';
+@import '@fontsource-variable/nunito';
+@import '@fontsource/silkscreen/400.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/600.css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
-/* Aerogram: airmail correspondence.
-   Light "Airmail": cream aerogramme paper, deep ink, airmail red + blue, brass postmarks.
-   Dark "Night Mail": midnight sorting office, cream ink, softened red/blue, brass lamps. */
+/* Buddyline: early-2000s instant messaging, reimagined cleanly.
+   Light "Daydream": sky-to-lilac desktop, white windows, glossy aqua title bars, bubblegum accents.
+   Dark "Midnight": deep indigo desktop with neon glows, violet chrome, aqua + pink accents. */
 :root {
-  --paper: #f3ecdc;
-  --paper-hi: #fffaf0;
-  --card: #fbf7ee;
-  --sunk: #ebe2cd;
-  --ink: #1b2640;
-  --muted: #535d77;
-  --line: #ddd1b8;
-  --edge: #9a8e72;
-  --red: #b3302a;
-  --blue: #1d4b97;
-  --on-accent: #fffaf0;
-  --brass: #81540f;
-  --mine: #e3ebf8;
-  --mine-line: #b9cbe8;
-  --good: #1f6b3d;
-  --bad: #a3261e;
-  --bad-bg: #f9e3dc;
-  --online: #2c8546;
-  --tip-bg: #1b2640;
-  --tip-ink: #fffaf0;
-  --shadow: 0 1px 0 rgb(27 38 64 / 0.08), 0 6px 16px -10px rgb(27 38 64 / 0.35);
-  --shadow-hover: 0 1px 0 rgb(27 38 64 / 0.1), 0 10px 22px -10px rgb(27 38 64 / 0.45);
-  --fibers:
-    radial-gradient(circle at 20% 30%, rgb(129 84 15 / 0.05) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 70% 80%, rgb(29 75 151 / 0.04) 0 1px, transparent 1.5px);
+  --paper: #e4ecff;
+  --paper-hi: #ffffff;
+  --card: #f6f8ff;
+  --sunk: #e9eefc;
+  --ink: #171c38;
+  --muted: #4f577c;
+  --line: #ccd5f0;
+  --edge: #8892bd;
+  --red: #b8146f;
+  --blue: #1d5bd0;
+  --on-accent: #ffffff;
+  --brass: #955500;
+  --mine: #e8f0ff;
+  --mine-line: #bcd0f7;
+  --good: #11743a;
+  --bad: #b3261e;
+  --bad-bg: #fde7e4;
+  --online: #1fa653;
+  --idle: #8a6d00;
+  --tip-bg: #171c38;
+  --tip-ink: #ffffff;
+  --title-a: #7cc0ff;
+  --title-b: #2a66e8;
+  --title-ink: #ffffff;
+  --wall:
+    radial-gradient(60rem 40rem at 10% -10%, #bfe3ff 0, transparent 60%), radial-gradient(50rem 36rem at 100% 10%, #f3d4ff 0, transparent 60%),
+    radial-gradient(60rem 40rem at 50% 120%, #c9f7e6 0, transparent 60%), linear-gradient(160deg, #dfeaff, #ece4ff 55%, #e2f7f1);
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 1px 2px rgb(23 28 56 / 0.12), 0 6px 14px -8px rgb(29 91 208 / 0.35);
+  --shadow-hover: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 2px 3px rgb(23 28 56 / 0.14), 0 10px 20px -8px rgb(29 91 208 / 0.45);
+  --win-shadow: 0 0 0 1px rgb(42 102 232 / 0.18), 0 18px 40px -18px rgb(23 28 56 / 0.45), 0 4px 10px -4px rgb(23 28 56 / 0.15);
+  --s-red: #c81e3a;
+  --s-orange: #c2520c;
+  --s-green: #12813f;
+  --s-teal: #0c7a86;
+  --s-blue: #1d5bd0;
+  --s-purple: #7a2fd0;
+  --s-pink: #c0177a;
   color-scheme: light;
 }
 [data-theme='dark'] {
-  --paper: #0d1424;
-  --paper-hi: #18223b;
-  --card: #141d33;
-  --sunk: #0a1020;
-  --ink: #efe6d2;
-  --muted: #a8afc2;
-  --line: #27324f;
-  --edge: #56638a;
-  --red: #ff7d6e;
-  --blue: #93b5ff;
-  --on-accent: #0d1424;
-  --brass: #e3b562;
-  --mine: #1b2948;
-  --mine-line: #2e4270;
-  --good: #82dba3;
-  --bad: #ff9d90;
-  --bad-bg: #3a1a1c;
-  --online: #62d68d;
-  --tip-bg: #efe6d2;
-  --tip-ink: #0d1424;
-  --shadow: 0 0 0 1px rgb(147 181 255 / 0.06), 0 8px 20px -12px rgb(0 0 0 / 0.8);
-  --shadow-hover: 0 0 0 1px rgb(147 181 255 / 0.16), 0 12px 26px -12px rgb(0 0 0 / 0.9);
-  --fibers:
-    radial-gradient(circle at 20% 30%, rgb(227 181 98 / 0.05) 0 1px, transparent 1.5px),
-    radial-gradient(circle at 70% 80%, rgb(147 181 255 / 0.05) 0 1px, transparent 1.5px);
+  --paper: #0b0d24;
+  --paper-hi: #151938;
+  --card: #1a1f44;
+  --sunk: #0f122e;
+  --ink: #eef0ff;
+  --muted: #b0b5df;
+  --line: #2d3369;
+  --edge: #5d66ad;
+  --red: #ff85cf;
+  --blue: #7ccaff;
+  --on-accent: #0b0d24;
+  --brass: #ffcb66;
+  --mine: #1d2552;
+  --mine-line: #34408a;
+  --good: #72eaa6;
+  --bad: #ff9d94;
+  --bad-bg: #3d1625;
+  --online: #44e391;
+  --idle: #f4d35e;
+  --tip-bg: #eef0ff;
+  --tip-ink: #0b0d24;
+  --title-a: #7d55f0;
+  --title-b: #33208f;
+  --title-ink: #ffffff;
+  --wall:
+    radial-gradient(50rem 34rem at 0% 0%, rgb(124 202 255 / 0.18) 0, transparent 60%), radial-gradient(46rem 34rem at 100% 20%, rgb(255 133 207 / 0.16) 0, transparent 60%),
+    radial-gradient(60rem 40rem at 50% 120%, rgb(125 85 240 / 0.25) 0, transparent 60%), linear-gradient(160deg, #0b0d24, #120f33 60%, #0a1430);
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.12) inset, 0 0 0 1px rgb(124 202 255 / 0.08), 0 8px 18px -10px rgb(0 0 0 / 0.8);
+  --shadow-hover: 0 1px 0 rgb(255 255 255 / 0.16) inset, 0 0 0 1px rgb(124 202 255 / 0.22), 0 10px 22px -10px rgb(0 0 0 / 0.9);
+  --win-shadow: 0 0 0 1px rgb(125 85 240 / 0.5), 0 0 30px -8px rgb(125 85 240 / 0.45), 0 20px 44px -18px rgb(0 0 0 / 0.9);
+  --s-red: #ff8a9a;
+  --s-orange: #ffad6b;
+  --s-green: #72eaa6;
+  --s-teal: #5fe3e6;
+  --s-blue: #7ccaff;
+  --s-purple: #c4a2ff;
+  --s-pink: #ff85cf;
   color-scheme: dark;
 }
 
@@ -85,8 +109,10 @@
   --color-bad: var(--bad);
   --color-bad-bg: var(--bad-bg);
   --color-online: var(--online);
-  --font-display: 'Fraunces Variable', Georgia, serif;
-  --font-sans: 'Public Sans Variable', system-ui, sans-serif;
+  --color-idle: var(--idle);
+  --font-display: 'Nunito Variable', system-ui, sans-serif;
+  --font-sans: 'Nunito Variable', system-ui, sans-serif;
+  --font-pixel: 'Silkscreen', ui-monospace, monospace;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
@@ -97,9 +123,8 @@ body,
 }
 body {
   margin: 0;
+  background: var(--wall) fixed;
   background-color: var(--paper);
-  background-image: var(--fibers);
-  background-size: 7px 7px, 11px 11px;
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -110,93 +135,127 @@ body {
   outline-offset: 2px;
 }
 ::selection {
-  background: color-mix(in srgb, var(--blue) 25%, transparent);
+  background: color-mix(in srgb, var(--blue) 28%, transparent);
 }
 
-/* The signature airmail chevron border. */
+/* Glossy accent strip (dialogs, cards). */
 .airmail {
-  background: repeating-linear-gradient(-45deg, var(--red) 0 10px, var(--paper-hi) 10px 16px, var(--blue) 16px 26px, var(--paper-hi) 26px 32px);
-}
-.airmail-edge {
-  border: 6px solid transparent;
-  border-image: repeating-linear-gradient(-45deg, var(--red) 0 10px, var(--paper-hi) 10px 16px, var(--blue) 16px 26px, var(--paper-hi) 26px 32px) 6;
-}
-[data-theme='dark'] .airmail,
-[data-theme='dark'] .airmail-edge {
-  filter: saturate(0.7) brightness(0.85);
+  background: linear-gradient(90deg, var(--blue), var(--red));
 }
 
-/* Perforated postage-stamp frame (avatars, room badges). */
-.stamp {
-  --r: 1.6px;
-  padding: calc(2 * var(--r));
+/* Window chrome: a glossy title bar with a bright highlight on the top half. */
+.window {
   background: var(--paper-hi);
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    radial-gradient(var(--r), #0000 97%, #000) var(--r) var(--r) / calc(var(--r) * 4) calc(var(--r) * 4) round;
-  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.18));
+  border-radius: 14px;
+  box-shadow: var(--win-shadow);
+  overflow: hidden;
 }
-.stamp-lg {
-  --r: 2.4px;
-}
-
-/* Rubber-stamp postmark (day dividers, receipts). */
-.postmark {
-  font-family: var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border: 2px solid currentColor;
-  outline: 1px solid currentColor;
-  outline-offset: 2px;
-  border-radius: 999px;
-  transform: rotate(-3deg);
-}
-
-/* Wax-seal unread badge. */
-.seal {
-  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--red) 70%, #fff) 0 18%, var(--red) 55%);
-  color: var(--on-accent);
-  border-radius: 46% 54% 50% 50% / 52% 46% 54% 48%;
-  box-shadow: inset 0 -1px 2px rgb(0 0 0 / 0.3), 0 1px 2px rgb(0 0 0 / 0.25);
-  font-family: var(--font-mono);
-  font-weight: 600;
-}
-[data-theme='dark'] .seal {
-  color: #1a0d0b;
-}
-
-/* Own messages: pale airmail paper with a striped top edge. */
-.letter-mine {
-  background: var(--mine);
-  border: 1px solid var(--mine-line);
+.titlebar {
   position: relative;
+  color: var(--title-ink);
+  background: linear-gradient(180deg, var(--title-a), var(--title-b));
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.25);
 }
-.letter-mine[data-first='true']::before {
+.titlebar::before {
   content: '';
   position: absolute;
-  inset: -1px -1px auto -1px;
-  height: 4px;
-  border-radius: inherit;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  background: repeating-linear-gradient(-45deg, var(--red) 0 6px, transparent 6px 9px, var(--blue) 9px 15px, transparent 15px 18px);
-  opacity: 0.85;
+  inset: 1px 6px 52% 6px;
+  border-radius: 10px 10px 40% 40% / 10px 10px 100% 100%;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.08));
+  pointer-events: none;
 }
-.letter-theirs {
-  background: var(--card);
-  border: 1px solid var(--line);
+.titlebar[data-active='false'] {
+  filter: saturate(0.35) brightness(1.05);
+}
+[data-theme='dark'] .titlebar[data-active='false'] {
+  filter: saturate(0.4) brightness(0.8);
+}
+.titlebar > * {
+  position: relative;
+}
+/* Small glossy round buttons on the title bar. */
+.chrome-btn {
+  color: var(--title-ink);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.4), rgb(255 255 255 / 0.1));
+  border: 1px solid rgb(255 255 255 / 0.55);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+}
+.chrome-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.6), rgb(255 255 255 / 0.2));
+}
+.chrome-btn.close:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ff8a8a, #d9263a);
+  border-color: #ffd0d0;
+}
+
+/* Glossy pill: primary buttons get a jelly highlight. */
+.gloss {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.38), rgb(255 255 255 / 0) 52%, rgb(0 0 0 / 0.06));
+}
+[data-theme='dark'] .gloss {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.35), rgb(255 255 255 / 0) 52%, rgb(0 0 0 / 0.1));
+}
+
+/* Buddy icons: a rounded glossy tile. */
+.stamp {
+  border-radius: 28%;
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 0 0 1.5px rgb(255 255 255 / 0.85),
+    0 1px 3px rgb(0 0 0 / 0.25);
+}
+[data-theme='dark'] .stamp {
+  box-shadow:
+    0 0 0 1.5px rgb(255 255 255 / 0.2),
+    0 1px 3px rgb(0 0 0 / 0.5);
+}
+.stamp::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.05));
+  border-radius: 0 0 50% 50% / 0 0 30% 30%;
+  pointer-events: none;
+}
+
+/* Pill tag (day dividers, receipts). */
+.postmark {
+  font-family: var(--font-pixel);
+  letter-spacing: 0.04em;
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: color-mix(in srgb, currentColor 8%, var(--paper-hi));
+  border-radius: 999px;
+}
+
+/* Glossy unread bubble. */
+.seal {
+  background: radial-gradient(circle at 35% 25%, #ff9db8 0 15%, #e5194f 60%);
+  color: #fff;
+  border-radius: 999px;
+  box-shadow:
+    inset 0 -1px 2px rgb(0 0 0 / 0.3),
+    0 1px 2px rgb(0 0 0 / 0.25);
+  font-weight: 800;
 }
 
 /* Every pressable thing lifts on hover and sinks on press. */
 .press {
-  transition: transform 110ms ease, box-shadow 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  transition:
+    transform 110ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    filter 140ms ease;
 }
 .press:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 .press:active:not(:disabled),
 .press[data-pressed='true'] {
-  transform: translateY(1px) scale(0.96);
+  transform: translateY(1px) scale(0.95);
+  filter: brightness(0.95);
 }
 .press:disabled {
   opacity: 0.5;
@@ -209,7 +268,7 @@ body {
   box-shadow: var(--shadow-hover);
 }
 
-/* Ink blot that spreads from the tap point. */
+/* Tap ripple from the press point. */
 .ink-dot {
   position: absolute;
   width: 10px;
@@ -233,14 +292,6 @@ body {
   color: var(--tip-ink);
   animation: tip-in 120ms ease-out both;
 }
-.tooltip::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  border-radius: 4px 4px 0 0;
-  background: repeating-linear-gradient(-45deg, var(--red) 0 5px, transparent 5px 7px, #6f97e6 7px 12px, transparent 12px 14px);
-}
 @keyframes tip-in {
   from {
     opacity: 0;
@@ -248,22 +299,21 @@ body {
   }
 }
 
-/* A message arriving: slides in like a letter dropped on the desk. */
 .arrive {
-  animation: arrive 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+  animation: arrive 240ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 }
 @keyframes arrive {
   from {
     opacity: 0;
-    transform: translateY(8px) rotate(-0.6deg);
+    transform: translateY(6px);
   }
 }
 .stamp-in {
-  animation: stamp-in 280ms cubic-bezier(0.2, 1.7, 0.4, 1) both;
+  animation: stamp-in 260ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }
 @keyframes stamp-in {
   from {
-    transform: scale(1.35) rotate(-8deg);
+    transform: scale(0.8);
     opacity: 0;
   }
 }
@@ -280,11 +330,43 @@ body {
 }
 @keyframes flash {
   from {
-    background-color: color-mix(in srgb, var(--brass) 25%, transparent);
+    background-color: color-mix(in srgb, var(--blue) 20%, transparent);
+  }
+}
+.toast-in {
+  animation: toast-in 360ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
   }
 }
 
-/* Typing: a nib writing three dots. */
+/* Buzz: the whole window shakes. Reduced motion gets a glow pulse instead. */
+.buzz {
+  animation: buzz 620ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes buzz {
+  10%,
+  90% {
+    transform: translate3d(-2px, 1px, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(5px, -2px, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-9px, 2px, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(9px, -1px, 0);
+  }
+}
+
 .typing-dots i {
   display: inline-block;
   width: 5px;
@@ -318,6 +400,29 @@ body {
   scrollbar-color: var(--edge) transparent;
 }
 
+/* Message formatting from the IM toolbar. */
+.fmt-red {
+  color: var(--s-red);
+}
+.fmt-orange {
+  color: var(--s-orange);
+}
+.fmt-green {
+  color: var(--s-green);
+}
+.fmt-teal {
+  color: var(--s-teal);
+}
+.fmt-blue {
+  color: var(--s-blue);
+}
+.fmt-purple {
+  color: var(--s-purple);
+}
+.fmt-pink {
+  color: var(--s-pink);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -326,4 +431,26 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+  .buzz {
+    animation: buzz-calm 900ms ease-out both !important;
+  }
+  @keyframes buzz-calm {
+    from {
+      box-shadow:
+        0 0 0 4px var(--red),
+        var(--win-shadow);
+    }
+  }
+}
+
+/* Desktop wallpaper + taskbar for the IM window manager. */
+.wall {
+  background: var(--wall);
+  background-color: var(--paper);
+}
+.taskbar {
+  border-top: 1px solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--paper-hi) 92%, transparent), color-mix(in srgb, var(--paper) 96%, transparent));
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -1px 0 rgb(255 255 255 / 0.4) inset;
 }

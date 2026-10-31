@@ -161,7 +161,7 @@ try {
   await a.page.getByRole('button', { name: 'Switch to dark (Midnight)' }).click()
   await a.page.waitForTimeout(500)
   await shot(a.page, 'buddy-list-dark')
-  await a.page.getByRole('button', { name: 'Switch to light (Daydream)' }).click()
+  await a.page.getByRole('button', { name: 'Switch to light (Chrome)' }).click()
   step('theme toggle: Midnight and back')
 
   // B on a phone: tabbed, full-screen IMs.

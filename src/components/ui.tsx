@@ -318,12 +318,12 @@ export function Logo({ size = '1.5em' }: { size?: string | number }) {
     <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true">
       <defs>
         <linearGradient id="bl-a" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#8fd3ff" />
-          <stop offset="1" stopColor="#2a66e8" />
+          <stop offset="0" style={{ stopColor: 'var(--logo-a, #8fd3ff)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--logo-b, #2a66e8)' }} />
         </linearGradient>
         <linearGradient id="bl-b" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffb0dc" />
-          <stop offset="1" stopColor="#d61f86" />
+          <stop offset="0" style={{ stopColor: 'var(--logo-c, #9fe3e6)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--logo-d, #0a7f86)' }} />
         </linearGradient>
       </defs>
       <path d="M26 14h24a10 10 0 0 1 10 10v10a10 10 0 0 1-10 10h-2l1 8-9-8H26a10 10 0 0 1-10-10V24a10 10 0 0 1 10-10z" fill="url(#bl-b)" />
@@ -353,8 +353,8 @@ export function RoomStamp({ size = 36, active = true }: { size?: number; active?
   return (
     <span className="stamp block shrink-0" style={{ width: size, height: size }} aria-hidden="true">
       <span
-        className={`flex h-full w-full items-center justify-center font-extrabold ${active ? 'text-white' : 'bg-sunk text-blue'}`}
-        style={{ fontSize: size * 0.48, background: active ? 'linear-gradient(160deg, #c9a6ff, #7238e0)' : undefined }}
+        className={`flex h-full w-full items-center justify-center font-extrabold ${active ? 'text-on-accent' : 'bg-sunk text-blue'}`}
+        style={{ fontSize: size * 0.48, background: active ? 'linear-gradient(160deg, color-mix(in srgb, var(--red) 60%, #fff), var(--red))' : undefined }}
       >
         #
       </span>

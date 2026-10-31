@@ -175,7 +175,7 @@ function Shell() {
         </div>
         {!live.length && (
           <div className="pointer-events-none absolute inset-y-0 right-0 grid place-items-center p-8 text-center" style={{ left: LIST_W }}>
-            <div className="opacity-80">
+            <div className="rounded-[var(--win-r)] bg-paper-hi/85 px-8 py-6 shadow-sm backdrop-blur-sm">
               <Logo size={72} />
               <p className="mt-3 text-xl font-extrabold">Double-click… well, just click a buddy.</p>
               <p className="mt-1 text-sm text-muted">IMs open here as windows you can drag, stack and minimize.</p>

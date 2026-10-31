@@ -199,7 +199,7 @@ function PeoplePicker({ onClose }: { onClose: () => void }) {
             <Stamp name={p.display_name} stamp={p.stamp} size={36} state={buddyLive(p, presence[p.id]).state} bot={p.is_bot} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold">{p.display_name}</p>
-              <p className="truncate text-xs text-muted">{statusLine(buddyLive(p, presence[p.id]), p)}</p>
+              <p className="truncate text-xs text-muted">{statusLine(buddyLive(p, presence[p.id]), p, undefined, me.display_name)}</p>
             </div>
             {!buddies.has(p.id) && (
               <Btn

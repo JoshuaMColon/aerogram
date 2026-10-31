@@ -17,3 +17,17 @@ test('tap gives visual feedback and opens sign-in', async ({ page }) => {
     .tap()
   await expect(page).toHaveURL(/\/login\?mode=signup/)
 })
+
+test('customizer goes full screen on a phone', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /appearance/i }).tap()
+  const panel = page.getByTestId('skin-panel')
+  await expect(panel).toBeVisible()
+  await page.waitForTimeout(300)
+  const box = await panel.boundingBox()
+  const vw = page.viewportSize()!.width
+  expect(Math.round(box!.width)).toBe(vw)
+  await panel.locator('[data-preset="terminal"]').tap()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expectAxeClean(page)
+})

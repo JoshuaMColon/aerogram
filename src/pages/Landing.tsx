@@ -1,7 +1,8 @@
-import { BellRing, Clock3, Moon, MessageSquare, Palette, ShieldCheck, Sun, Users, Volume2, Zap } from 'lucide-react'
+import { BellRing, Clock3, Moon, MessageSquare, Paintbrush, Palette, ShieldCheck, Sun, Users, Volume2, Zap } from 'lucide-react'
 import { Btn, LinkBtn, Logo, Stamp, Wordmark } from '../components/ui'
 import { Smiley } from '../components/Smiley'
 import { useAuth } from '../state/auth'
+import { useSkin } from '../state/skin'
 import { navigate } from '../router'
 
 const go = (to: string) => (e: React.MouseEvent<HTMLAnchorElement>) => (e.preventDefault(), navigate(to))
@@ -12,6 +13,7 @@ const FEATURES = [
   { icon: MessageSquare, title: 'IM windows', body: 'Every conversation is a window: drag, stack, minimize and keep five going at once. Full-screen tabs on phones.' },
   { icon: BellRing, title: 'Buzz!', body: 'Shake a buddy’s window to get their attention (politely: once every ten seconds, and gentler with reduced motion).' },
   { icon: Palette, title: 'Fonts, colors, smileys', body: 'Bold, italic, color and size, smileys that animate, emoji reactions, plus files and images up to 5 MB.' },
+  { icon: Paintbrush, title: 'Skins', body: 'Eight built-in looks from brushed Chrome to green-screen Terminal, or mix your own accent, wallpaper, fonts and chat style.' },
   { icon: Volume2, title: 'Door sounds', body: 'Original sign-on and sign-off chimes synthesized in your browser. One click mutes them.' },
 ]
 
@@ -36,7 +38,9 @@ function Row({ name, stamp, state, line, bot }: { name: string; stamp: number; s
 }
 
 export function Landing() {
-  const { session, theme, toggleTheme } = useAuth()
+  const { session } = useAuth()
+  const { resolved, toggleMode, setPanelOpen } = useSkin()
+  const theme = resolved.mode
   return (
     <div className="wall min-h-dvh text-ink">
       <header className="mx-auto flex max-w-6xl items-center gap-2 px-5 py-4">
@@ -44,7 +48,10 @@ export function Landing() {
           <Wordmark />
         </span>
         <span className="ml-auto" />
-        <Btn tip={theme === 'dark' ? 'Switch to light (Daydream)' : 'Switch to dark (Midnight)'} iconOnly variant="plain" onClick={toggleTheme}>
+        <Btn tip="Appearance: try the skins" iconOnly variant="plain" onClick={() => setPanelOpen(true)}>
+          <Palette size={19} aria-hidden="true" />
+        </Btn>
+        <Btn tip={theme === 'dark' ? 'Switch to light (Chrome)' : 'Switch to dark (Midnight)'} iconOnly variant="plain" onClick={toggleMode}>
           {theme === 'dark' ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
         </Btn>
         {session ? (

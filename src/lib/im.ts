@@ -53,8 +53,9 @@ export function lastSeenText(iso: string | null | undefined, now = Date.now()) {
 }
 
 /** The little line under a screen name in the buddy list. */
-export function statusLine(live: Live, p: Pick<Profile, 'bio' | 'last_seen_at'> | undefined, now = Date.now()) {
-  if (live.state === 'away') return live.away ? `Away: ${firstLine(live.away)}` : 'Away'
+/** `viewer` fills in %n/%t in an away message, the way AIM showed it to whoever was looking. */
+export function statusLine(live: Live, p: Pick<Profile, 'bio' | 'last_seen_at'> | undefined, now = Date.now(), viewer: string | null = null) {
+  if (live.state === 'away') return live.away ? `Away: ${firstLine(expandAway(live.away, viewer, new Date(now)))}` : 'Away'
   if (live.state === 'idle' && live.idleSince) return idleText(live.idleSince, now)
   if (live.state === 'offline') return lastSeenText(p?.last_seen_at, now)
   return p?.bio ? firstLine(p.bio) : 'Online'
@@ -119,9 +120,13 @@ export const DEFAULT_AWAYS = [
   "Can't talk, the dial-up is screaming.",
 ]
 
-/** Expand %n (their screen name) and %t (time) like old clients did. */
-export function expandAway(msg: string, toName: string, now = new Date()) {
-  return msg.replaceAll('%n', toName).replaceAll('%t', now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))
+/**
+ * Expand %n (the person being answered) and %t (time) like old clients did. New auto responses
+ * already have %n filled in by the database; this covers older ones. Pass null when the viewer is the
+ * away person themself, so they never see their own name in "Hi %n".
+ */
+export function expandAway(msg: string, toName: string | null, now = new Date()) {
+  return msg.replaceAll('%n', toName ?? 'there').replaceAll('%t', now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))
 }
 
 /* ------------------------------------------------------------------ typing */

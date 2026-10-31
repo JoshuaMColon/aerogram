@@ -327,9 +327,9 @@ export function RoomView({ room, active, onPeople, onLeft, onBuzzed }: Props) {
           <p className={`truncate text-[11px] ${otherLive?.away ? 'italic text-brass' : 'text-muted'}`} data-testid="im-status">
             {room.kind === 'dm' ? (
               dmOther?.is_bot ? (
-                `${statusLine(otherLive!, dmOther)} · bot`
+                `${statusLine(otherLive!, dmOther, undefined, me.display_name)} · bot`
               ) : (
-                statusLine(otherLive!, dmOther)
+                statusLine(otherLive!, dmOther, undefined, me.display_name)
               )
             ) : (
               <>

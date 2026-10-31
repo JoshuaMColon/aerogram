@@ -9,6 +9,7 @@ import type { Message, Profile } from '../lib/types'
 import { EmojiGrid } from './Emoji'
 import { QUICK } from '../lib/emoji'
 import { Btn, Tip, inkDot } from './ui'
+import { useSkin } from '../state/skin'
 
 interface Props {
   db: SupabaseClient
@@ -127,6 +128,7 @@ function names(ids: string[], profiles: Record<string, Profile>, me: string) {
 
 export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, first, profiles, selected, onSelect, onReact, onEdit, onDelete, onRetry, onDiscard }: Props) {
   const mine = m.user_id === me
+  const bubble = useSkin().resolved.look.bubble
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(m.body)
   const [picker, setPicker] = useState(false)
@@ -154,6 +156,84 @@ export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, f
   const showBar = !deleted && !editing && !m.pending && !m.failed && m.kind !== 'buzz'
   const nameCls = mine ? 'text-red' : 'text-blue'
 
+  const dim = m.pending && !m.attachment ? 'opacity-70' : ''
+  const header =
+    m.kind === 'away' ? (
+      <span className={`font-extrabold ${nameCls}`}>
+        Auto response from {name}
+        <span className="ml-1 font-normal text-muted">({clock(m.created_at)})</span>:{' '}
+      </span>
+    ) : (
+      <span className={`font-extrabold ${nameCls}`}>
+        {name}
+        {author?.is_bot && <span className="ml-1 rounded bg-brass px-1 align-[0.15em] font-pixel text-[8px] font-normal text-paper-hi">BOT</span>}
+        <time dateTime={m.created_at} className="ml-1 text-[11px] font-semibold text-muted">
+          ({clock(m.created_at)})
+        </time>
+        :{' '}
+      </span>
+    )
+  const content = (
+    <>
+      {deleted ? (
+        <span className="italic text-muted">message deleted</span>
+      ) : editing ? (
+        <div className="mt-1">
+          <label className="sr-only" htmlFor={`edit-${m.id}`}>
+            Edit message
+          </label>
+          <textarea
+            id={`edit-${m.id}`}
+            ref={editRef}
+            value={draft}
+            maxLength={4000}
+            rows={Math.min(8, Math.max(2, draft.split('\n').length))}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                save()
+              } else if (e.key === 'Escape') {
+                e.stopPropagation()
+                setEditing(false)
+                setDraft(m.body)
+              }
+            }}
+            className="w-full resize-none rounded-md border border-edge bg-card p-2 text-[0.95rem] outline-none focus:border-blue"
+          />
+          <div className="mt-1 flex items-center justify-end gap-1.5">
+            <span className="mr-auto text-xs text-muted">Enter to save · Esc to cancel</span>
+            <Btn tip="Discard changes" size="xs" variant="plain" onClick={() => (setEditing(false), setDraft(m.body))}>
+              <X size={14} aria-hidden="true" /> Cancel
+            </Btn>
+            <Btn tip="Save the edited message" size="xs" variant="blue" onClick={save}>
+              <Check size={14} aria-hidden="true" /> Save
+            </Btn>
+          </div>
+        </div>
+      ) : (
+        <>
+          {m.body && (
+            <span className={`whitespace-pre-wrap break-words ${big ? 'text-3xl leading-tight' : ''} ${m.kind === 'away' ? 'italic' : ''} ${styleClass(m.style)}`}>
+              <RichText text={m.kind === 'away' ? expandAway(m.body, mine ? null : (profiles[me]?.display_name ?? null), new Date(m.created_at)) : m.body} />
+            </span>
+          )}
+          {m.edited_at && <span className="ml-1.5 text-[11px] font-semibold text-muted">(edited)</span>}
+          {m.attachment && <Attachment db={db} m={m} />}
+        </>
+      )}
+    </>
+  )
+  const smallHeader = (
+    <div className={`mb-0.5 px-1 text-[11px] ${mine && bubble === 'bubbles' ? 'text-right' : ''}`}>
+      <span className={`font-extrabold ${nameCls}`}>{m.kind === 'away' ? `Auto response from ${name}` : name}</span>
+      {author?.is_bot && <span className="ml-1 rounded bg-brass px-1 font-pixel text-[8px] text-paper-hi">BOT</span>}
+      <time dateTime={m.created_at} className="ml-1.5 font-semibold text-muted">
+        {clock(m.created_at)}
+      </time>
+    </div>
+  )
+
   if (m.kind === 'buzz')
     return (
       <div data-msg={m.id} className="arrive my-1.5 flex justify-center px-3">
@@ -176,72 +256,24 @@ export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, f
         if (matchMedia('(hover: none)').matches) onSelect(selected ? null : m.id)
       }}
     >
-      <div className={`min-w-0 text-[0.95rem] leading-snug ${m.pending && !m.attachment ? 'opacity-70' : ''}`}>
-        {m.kind === 'away' ? (
-          <span className={`font-extrabold ${nameCls}`}>
-            Auto response from {name}
-            <span className="ml-1 font-normal text-muted">({clock(m.created_at)})</span>:{' '}
-          </span>
-        ) : (
-          <span className={`font-extrabold ${nameCls}`}>
-            {name}
-            {author?.is_bot && <span className="ml-1 rounded bg-brass px-1 align-[0.15em] font-pixel text-[8px] font-normal text-paper-hi">BOT</span>}
-            <time dateTime={m.created_at} className="ml-1 text-[11px] font-semibold text-muted">
-              ({clock(m.created_at)})
-            </time>
-            :{' '}
-          </span>
-        )}
-        {deleted ? (
-          <span className="italic text-muted">message deleted</span>
-        ) : editing ? (
-          <div className="mt-1">
-            <label className="sr-only" htmlFor={`edit-${m.id}`}>
-              Edit message
-            </label>
-            <textarea
-              id={`edit-${m.id}`}
-              ref={editRef}
-              value={draft}
-              maxLength={4000}
-              rows={Math.min(8, Math.max(2, draft.split('\n').length))}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  save()
-                } else if (e.key === 'Escape') {
-                  e.stopPropagation()
-                  setEditing(false)
-                  setDraft(m.body)
-                }
-              }}
-              className="w-full resize-none rounded-md border border-edge bg-card p-2 text-[0.95rem] outline-none focus:border-blue"
-            />
-            <div className="mt-1 flex items-center justify-end gap-1.5">
-              <span className="mr-auto text-xs text-muted">Enter to save · Esc to cancel</span>
-              <Btn tip="Discard changes" size="xs" variant="plain" onClick={() => (setEditing(false), setDraft(m.body))}>
-                <X size={14} aria-hidden="true" /> Cancel
-              </Btn>
-              <Btn tip="Save the edited message" size="xs" variant="blue" onClick={save}>
-                <Check size={14} aria-hidden="true" /> Save
-              </Btn>
-            </div>
-          </div>
-        ) : (
-          <>
-            {m.body && (
-              <span className={`whitespace-pre-wrap break-words ${big ? 'text-3xl leading-tight' : ''} ${m.kind === 'away' ? 'italic' : ''} ${styleClass(m.style)}`}>
-                <RichText text={m.kind === 'away' ? expandAway(m.body, profiles[me]?.display_name ?? 'you', new Date(m.created_at)) : m.body} />
-              </span>
-            )}
-            {m.edited_at && <span className="ml-1.5 text-[11px] font-semibold text-muted">(edited)</span>}
-            {m.attachment && <Attachment db={db} m={m} />}
-          </>
-        )}
-      </div>
+      {bubble === 'classic' ? (
+        <div className={`min-w-0 text-[0.95rem] leading-snug ${dim}`}>
+          {header}
+          {content}
+        </div>
+      ) : bubble === 'bubbles' ? (
+        <div className={`flex min-w-0 flex-col text-[0.95rem] leading-snug ${mine ? 'items-end' : 'items-start'} ${dim}`}>
+          {(first || m.kind === 'away') && smallHeader}
+          <div className={`bubble ${mine ? 'mine' : ''} ${first ? (mine ? 'tail-mine' : 'tail-them') : ''} ${editing ? 'w-full' : ''}`}>{content}</div>
+        </div>
+      ) : (
+        <div className={`msg-card min-w-0 text-[0.95rem] leading-snug ${mine ? 'mine' : ''} ${dim}`}>
+          {smallHeader}
+          {content}
+        </div>
+      )}
 
-      {m.pending && <span className="block text-[11px] font-semibold text-muted">Sending…</span>}
+      {m.pending && <span className={`block text-[11px] font-semibold text-muted ${mine && bubble === 'bubbles' ? 'text-right' : ''}`}>Sending…</span>}
       {m.failed && (
         <span className="mt-1 flex items-center gap-1.5 text-xs text-bad" role="alert">
           Not sent: {m.failed}
@@ -255,7 +287,7 @@ export const MessageItem = memo(function MessageItem({ db, msg: m, author, me, f
       )}
 
       {reactions.length > 0 && !deleted && (
-        <div className="mt-1 flex flex-wrap gap-1">
+        <div className={`mt-1 flex flex-wrap gap-1 ${mine && bubble === 'bubbles' ? 'justify-end' : ''}`}>
           {reactions.map(([e, users]) => {
             const on = users.includes(me)
             return (

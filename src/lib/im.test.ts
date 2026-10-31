@@ -52,6 +52,8 @@ describe('buddy state', () => {
     const on: Live = { state: 'online', away: null, idleSince: null }
     expect(statusLine(on, { bio: 'hi\nthere', last_seen_at: null }, NOW)).toBe('hi')
     expect(statusLine({ state: 'away', away: 'at lunch', idleSince: null }, undefined, NOW)).toBe('Away: at lunch')
+    expect(statusLine({ state: 'away', away: 'Hi %n!', idleSince: null }, undefined, NOW, 'Mara')).toBe('Away: Hi Mara!')
+    expect(statusLine({ state: 'away', away: 'Hi %n!', idleSince: null }, undefined, NOW)).toBe('Away: Hi there!')
     expect(statusLine({ state: 'idle', away: null, idleSince: '2026-10-31T15:48:00Z' }, undefined, NOW)).toBe('Idle 12m')
   })
 })
@@ -93,6 +95,7 @@ describe('buddy list sections', () => {
 describe('away + typing', () => {
   it('expands %n and %t', () => {
     expect(expandAway('Hi %n!', 'Teo')).toBe('Hi Teo!')
+    expect(expandAway('Hi %n!', null)).toBe('Hi there!')
     expect(expandAway('back at %t', 'x', new Date(NOW))).not.toContain('%t')
   })
   it('words typing like the classics', () => {

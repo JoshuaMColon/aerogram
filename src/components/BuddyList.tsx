@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ChevronRight, Compass, FolderPlus, LogOut, MessageSquare, Moon, MoreHorizontal, Plus, Sun, UserPlus, UserRound, Volume2, VolumeX } from 'lucide-react'
-import { DEFAULT_AWAYS, buddyLive, buildSections, statusLine, type Live, type Section } from '../lib/im'
+import { ChevronRight, Compass, FolderPlus, LogOut, MessageSquare, Moon, MoreHorizontal, Palette, Plus, Sun, UserPlus, UserRound, Volume2, VolumeX } from 'lucide-react'
+import { DEFAULT_AWAYS, buddyLive, buildSections, expandAway, statusLine, type Live, type Section } from '../lib/im'
 import { shortAgo } from '../lib/logic'
 import { isMuted, onMuted, play, setMuted, unlockAudio } from '../lib/sounds'
 import type { RoomSummary } from '../lib/types'
 import { useAuth } from '../state/auth'
+import { useSkin } from '../state/skin'
 import { useBuddies } from '../state/buddies'
 import { roomTitle, useChat } from '../state/chat'
 import { useWindows } from '../state/windows'
@@ -82,7 +83,7 @@ function Item({ children, onClick, tip, danger }: { children: ReactNode; onClick
 
 /* ------------------------------------------------------------------ hover card */
 
-function HoverCard({ at, name, stamp, bot, live, line, bio }: { at: DOMRect; name: string; stamp: number; bot?: boolean; live: Live; line: string; bio?: string }) {
+function HoverCard({ at, name, stamp, bot, live, line, bio, viewer }: { at: DOMRect; name: string; stamp: number; bot?: boolean; live: Live; line: string; bio?: string; viewer: string }) {
   const left = Math.min(at.right + 8, window.innerWidth - 268)
   const top = Math.min(at.top, window.innerHeight - 170)
   return (
@@ -94,7 +95,7 @@ function HoverCard({ at, name, stamp, bot, live, line, bio }: { at: DOMRect; nam
           <p className={`font-pixel text-[10px] uppercase ${live.state === 'away' ? 'text-brass' : live.state === 'idle' ? 'text-muted' : live.state === 'online' ? 'text-good' : 'text-muted'}`}>
             {live.state === 'online' ? 'Online' : live.state}
           </p>
-          {live.away !== null ? <p className="mt-1 whitespace-pre-wrap break-words italic">{live.away || 'Away'}</p> : <p className="mt-1 text-muted">{line}</p>}
+          {live.away !== null ? <p className="mt-1 whitespace-pre-wrap break-words italic">{live.away ? expandAway(live.away, viewer) : 'Away'}</p> : <p className="mt-1 text-muted">{line}</p>}
           {bio && live.away !== null && <p className="mt-1.5 border-t border-line pt-1.5 text-muted">{bio}</p>}
         </div>
       </div>
@@ -105,7 +106,7 @@ function HoverCard({ at, name, stamp, bot, live, line, bio }: { at: DOMRect; nam
 /* ------------------------------------------------------------------ rows */
 
 function BuddyRow({ id, live, section }: { id: string; live: Live; section: Section }) {
-  const { profiles, rooms, visible } = useChat()
+  const { me, profiles, rooms, visible } = useChat()
   const { list, move, remove } = useBuddies()
   const { openDm } = useWindows()
   const toast = useToast()
@@ -116,7 +117,7 @@ function BuddyRow({ id, live, section }: { id: string; live: Live; section: Sect
   const [card, setCard] = useState<DOMRect | null>(null)
   const timer = useRef(0)
   const row = useRef<HTMLLIElement>(null)
-  const line = statusLine(live, p)
+  const line = statusLine(live, p, undefined, me.display_name)
   const off = live.state === 'offline'
   const current = list.buddies.find((b) => b.buddy === id)?.group_id
   const im = () => openDm(id).catch((e: Error) => toast(e.message))
@@ -152,6 +153,7 @@ function BuddyRow({ id, live, section }: { id: string; live: Live; section: Sect
         }}
         onPointerDown={inkDot}
         title={`Send ${name} an IM`}
+        data-row
         className="press relative flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden rounded-lg py-1 pl-6 pr-8 text-left transition-colors hover:bg-sunk"
       >
         <Stamp name={name} stamp={p?.stamp ?? 0} size={28} state={live.state} bot={p?.is_bot} />
@@ -198,7 +200,7 @@ function BuddyRow({ id, live, section }: { id: string; live: Live; section: Sect
           )}
         </Menu>
       </span>
-      {card && p && <HoverCard at={card} name={name} stamp={p.stamp} bot={p.is_bot} live={live} line={line} bio={p.bio} />}
+      {card && p && <HoverCard at={card} name={name} stamp={p.stamp} bot={p.is_bot} live={live} line={line} bio={p.bio} viewer={me.display_name} />}
       <span className="sr-only">{section.name}</span>
     </li>
   )
@@ -309,6 +311,7 @@ function RoomRow({ r }: { r: RoomSummary }) {
         onClick={() => open(r.id)}
         onPointerDown={inkDot}
         title={r.kind === 'dm' ? `Open your IM with ${title}` : `Open #${r.slug ?? title}`}
+        data-row
         className="press relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg px-2 py-1.5 text-left hover:bg-sunk"
       >
         {r.kind === 'dm' ? (
@@ -336,7 +339,9 @@ function RoomRow({ r }: { r: RoomSummary }) {
 /* ------------------------------------------------------------------ the list */
 
 export function BuddyList({ open }: { open: OpenDialog }) {
-  const { theme, toggleTheme, isGuest, signOut } = useAuth()
+  const { isGuest, signOut } = useAuth()
+  const { resolved, toggleMode, setPanelOpen } = useSkin()
+  const theme = resolved.mode
   const { me, rooms, roomsLoaded, presence, profiles, status, away, idleSince, setAway } = useChat()
   const { list, loaded } = useBuddies()
   const toast = useToast()
@@ -535,7 +540,10 @@ export function BuddyList({ open }: { open: OpenDialog }) {
         >
           {muted ? <VolumeX size={17} aria-hidden="true" /> : <Volume2 size={17} aria-hidden="true" />}
         </Btn>
-        <Btn tip={theme === 'dark' ? 'Switch to light (Daydream)' : 'Switch to dark (Midnight)'} iconOnly size="sm" variant="plain" onClick={toggleTheme}>
+        <Btn tip="Appearance: skins, colors, fonts and layout" iconOnly size="sm" variant="plain" data-testid="open-skins" onClick={() => setPanelOpen(true)}>
+          <Palette size={17} aria-hidden="true" />
+        </Btn>
+        <Btn tip={theme === 'dark' ? 'Switch to light (Chrome)' : 'Switch to dark (Midnight)'} iconOnly size="sm" variant="plain" onClick={toggleMode}>
           {theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
         </Btn>
         <Btn tip="My profile" iconOnly size="sm" variant="plain" onClick={() => open('profile')}>

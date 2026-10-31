@@ -199,7 +199,7 @@ export function Landing() {
           <span>A portfolio project by Joshua M. Colon. Not affiliated with any classic messenger.</span>
           <a
             className="ml-auto underline underline-offset-2 hover:text-ink"
-            href="https://github.com/JoshuaMColon/aerogram"
+            href="https://github.com/JoshuaMColon/buddyline"
             title="View the source on GitHub"
             target="_blank"
             rel="noreferrer noopener"

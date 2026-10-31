@@ -4,12 +4,12 @@
 
 > Buddyline is an original design. It is not affiliated with, and uses no names, logos, artwork or sounds from, any classic messenger. Every sound is synthesized in the browser with the Web Audio API.
 
-- **Live app:** https://aerogram-ten.vercel.app
-- **Guest demo (no sign-up):** https://aerogram-ten.vercel.app/demo
+- **Live app:** https://buddyline-app.vercel.app
+- **Guest demo (no sign-up):** https://buddyline-app.vercel.app/demo
 
-The repo and Vercel project keep their original `aerogram` names (and URLs) so existing links and deployments keep working.
+The project started out as Aerogram. The old repo URL redirects here and https://aerogram-ten.vercel.app still serves the same deployment.
 
-![CI](https://github.com/JoshuaMColon/aerogram/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/JoshuaMColon/buddyline/actions/workflows/ci.yml/badge.svg)
 
 ## Features
 
@@ -79,7 +79,7 @@ React 19 · TypeScript · Vite · Tailwind CSS 4 · Supabase (Auth, Postgres, Re
 ## Run it locally
 
 ```bash
-git clone https://github.com/JoshuaMColon/aerogram buddyline && cd buddyline
+git clone https://github.com/JoshuaMColon/buddyline && cd buddyline
 npm install
 cp .env.example .env.local   # fill in your project URL and publishable/anon key
 npm run dev
@@ -95,7 +95,7 @@ Without env vars the app still builds; the landing and sign-in pages render and 
 npm run typecheck && npm run lint
 npm test            # Vitest: grouping, receipts, unread, files, screen names, buddy sections, idle/away text, smileys, window layout, skin contrast (every preset plus 300 random skins)
 npm run test:e2e    # Playwright + axe on landing/sign-in (light, dark, mobile), tooltips, theme, demo sign-off → Try the demo (against a mocked Supabase), every skin with the customizer open, custom choices, phone customizer
-BASE_URL=https://aerogram-ten.vercel.app SHOTS_DIR=shots npm run test:live
+BASE_URL=https://buddyline-app.vercel.app SHOTS_DIR=shots npm run test:live
 # two real guest sessions: add buddy, sign-off/sign-on toasts, IM window auto-open, read receipt,
 # "is typing..." / "has entered text.", away message + exactly one auto response, Buzz, theme, mobile.
 # Prints the guest ids it created so you can delete them (they also expire after a day).

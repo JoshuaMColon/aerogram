@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Aerogram: real-time chat styled like airmail. Rooms, DMs, presence, typing, read receipts, reactions and file sharing on Supabase.",
+  "description": "Buddyline: an early-2000s style instant messenger with a live Buddy List, away messages, IM windows, Buzz and customizable skins, on React and Supabase.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p . && vite build",

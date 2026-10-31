@@ -171,9 +171,11 @@ export function Demo() {
     if (!supabase || !ready) return
     if (session) return navigate('/app', true)
     let live = true
-    demoStart ??= supabase.auth.signInAnonymously()
-    demoStart.then(({ error }) => {
-      if (error) demoStart = null
+    // Shared so a StrictMode double-run makes one guest, but cleared once it settles:
+    // after a sign-off, the next visit to /demo has to start a fresh guest.
+    const start = (demoStart ??= supabase.auth.signInAnonymously())
+    start.then(({ error }) => {
+      if (demoStart === start) demoStart = null
       if (live && error) setErr(error.message)
     })
     return () => {

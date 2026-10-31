@@ -23,7 +23,7 @@ import { Btn, Stamp, Tip, inkDot } from './ui'
 
 const QUICK_ACCENTS = ['#1767db', '#0a7f86', '#12813f', '#6d3fd6', '#d2460e', '#c81e3a', '#c0177a', '#3d4b5c']
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+function Section({ title, hint, children }: { title: string; hint?: ReactNode; children: ReactNode }) {
   return (
     <section className="border-t border-line px-4 py-3">
       <h3 className="mb-2 flex items-baseline justify-between gap-2 font-pixel text-[10px] uppercase tracking-wide text-muted">
@@ -228,7 +228,17 @@ function Panel() {
           </p>
         </div>
 
-        <Section title="Skins" hint="Hover a skin for its story">
+        <Section
+          title="Skins"
+          hint={
+            <>
+              <span className="[@media(hover:none)]:hidden">Hover a skin for its story</span>
+              <span className="hidden [@media(hover:none)]:inline" data-testid="skins-touch-hint">
+                Tap a skin to try it
+              </span>
+            </>
+          }
+        >
           <div className="grid grid-cols-2 gap-2">
             {PRESETS.map((p) => (
               <PresetCard key={p.id} id={p.id} active={p.id === skin.preset && !isCustomized(skin)} onPick={() => (setSkin(switchPreset(skin, p.id)), setAnnounce(`${p.name} skin applied`))} />

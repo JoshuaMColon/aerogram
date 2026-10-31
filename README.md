@@ -94,7 +94,7 @@ Without env vars the app still builds; the landing and sign-in pages render and 
 ```bash
 npm run typecheck && npm run lint
 npm test            # Vitest: grouping, receipts, unread, files, screen names, buddy sections, idle/away text, smileys, window layout, skin contrast (every preset plus 300 random skins)
-npm run test:e2e    # Playwright + axe on landing/sign-in (light, dark, mobile), tooltips, theme, every skin with the customizer open, custom choices, phone customizer
+npm run test:e2e    # Playwright + axe on landing/sign-in (light, dark, mobile), tooltips, theme, demo sign-off → Try the demo (against a mocked Supabase), every skin with the customizer open, custom choices, phone customizer
 BASE_URL=https://aerogram-ten.vercel.app SHOTS_DIR=shots npm run test:live
 # two real guest sessions: add buddy, sign-off/sign-on toasts, IM window auto-open, read receipt,
 # "is typing..." / "has entered text.", away message + exactly one auto response, Buzz, theme, mobile.

@@ -10,8 +10,9 @@ const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
  * render: anonymous sign-up, sign-out, a profile, and empty rooms/buddies. Realtime is left
  * unanswered (channels simply never join), which the app tolerates.
  */
-export async function mockSupabase(page: Page) {
+export async function mockSupabase(page: Page, opts: { stallSignups?: number } = {}) {
   const guests: string[] = []
+  let stalled = 0
   let current: { id: string; name: string } | null = null
 
   const json = (route: Route, body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) })
@@ -54,6 +55,11 @@ export async function mockSupabase(page: Page) {
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
 
     if (path === '/auth/v1/signup') {
+      // Leave the first N sign-ups hanging, like a request lost on flaky mobile data.
+      if (stalled < (opts.stallSignups ?? 0)) {
+        stalled++
+        return
+      }
       const id = crypto.randomUUID()
       current = { id, name: `mock_guest_${guests.length + 1}` }
       guests.push(id)

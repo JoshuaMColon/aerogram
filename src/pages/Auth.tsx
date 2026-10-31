@@ -164,9 +164,28 @@ export function Login() {
 
 let demoStart: ReturnType<NonNullable<typeof supabase>['auth']['signInAnonymously']> | null = null
 
+/** After this long without a guest session the page offers a retry instead of a silent spinner. */
+export const DEMO_SLOW_MS = 8000
+
+function demoErrorText(error: { message: string; status?: number; code?: string }) {
+  if (error.status === 429 || error.code === 'over_request_rate_limit') return 'Lots of people are trying the demo right now. Please try again in a minute.'
+  if (/fetch|network|load failed/i.test(error.message)) return 'Couldn’t reach Buddyline. Check your connection and try again.'
+  return error.message
+}
+
 export function Demo() {
   const { session, ready } = useAuth()
   const [err, setErr] = useState<string | null>(supabase ? null : 'This build has no Supabase configuration.')
+  const [slow, setSlow] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+
+  // A guest that takes too long (slow mobile data, or an in-app browser that froze the tab
+  // in the background) gets a visible way out instead of an endless "Picking…" screen.
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), DEMO_SLOW_MS)
+    return () => clearTimeout(t)
+  }, [attempt])
+
   useEffect(() => {
     if (!supabase || !ready) return
     if (session) return navigate('/app', true)
@@ -174,14 +193,39 @@ export function Demo() {
     // Shared so a StrictMode double-run makes one guest, but cleared once it settles:
     // after a sign-off, the next visit to /demo has to start a fresh guest.
     const start = (demoStart ??= supabase.auth.signInAnonymously())
-    start.then(({ error }) => {
-      if (demoStart === start) demoStart = null
-      if (live && error) setErr(error.message)
-    })
+    start
+      .then(({ error }) => {
+        if (demoStart === start) demoStart = null
+        if (live && error) setErr(demoErrorText(error))
+      })
+      .catch((e: Error) => {
+        if (demoStart === start) demoStart = null
+        if (live) setErr(demoErrorText(e))
+      })
+    // Coming back to a tab the browser paused: pick up a session that landed meanwhile.
+    const db = supabase
+    const resume = () => {
+      if (document.visibilityState !== 'visible') return
+      void db.auth.getSession().then(({ data }) => {
+        if (live && data.session) navigate('/app', true)
+      })
+    }
+    document.addEventListener('visibilitychange', resume)
+    window.addEventListener('pageshow', resume)
     return () => {
       live = false
+      document.removeEventListener('visibilitychange', resume)
+      window.removeEventListener('pageshow', resume)
     }
-  }, [session, ready])
+  }, [session, ready, attempt])
+
+  function retry() {
+    demoStart = null
+    setErr(null)
+    setSlow(false)
+    setAttempt((n) => n + 1)
+  }
+
   return (
     <Frame>
       <div className="mx-auto max-w-md pt-16 text-center">
@@ -191,8 +235,13 @@ export function Demo() {
             <p role="alert" className="mt-2 text-bad">
               {err}
             </p>
-            <div className="mt-5">
-              <LinkBtn href="/login" tip="Use an account instead" variant="red" onClick={(e) => (e.preventDefault(), navigate('/login'))}>
+            <div className="mt-5 flex justify-center gap-2">
+              {supabase && (
+                <Btn tip="Ask for a new guest screen name" variant="red" onClick={retry}>
+                  Try again
+                </Btn>
+              )}
+              <LinkBtn href="/login" tip="Use an account instead" variant={supabase ? 'ghost' : 'red'} onClick={(e) => (e.preventDefault(), navigate('/login'))}>
                 Sign in instead
               </LinkBtn>
             </div>
@@ -206,6 +255,16 @@ export function Demo() {
               Picking your guest screen name…
             </h1>
             <p className="mt-2 text-sm text-muted">No sign-up. Your guest IMs and files are cleared after a day.</p>
+            {slow && (
+              <div className="mt-6">
+                <p className="text-sm text-muted">This is taking longer than usual. A slow connection or an in-app browser can hold it up.</p>
+                <div className="mt-3 flex justify-center">
+                  <Btn tip="Ask for a new guest screen name" variant="red" onClick={retry}>
+                    Try again
+                  </Btn>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

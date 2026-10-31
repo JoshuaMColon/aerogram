@@ -268,6 +268,13 @@ export function ChatApp({ roomId }: { roomId: string | null }) {
 }
 
 function Center({ title, body, spinner, children }: { title: string; body: string; spinner?: boolean; children?: React.ReactNode }) {
+  // A spinner that outlives a slow connection (or a tab the browser paused) offers a reload.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    if (!spinner) return
+    const t = setTimeout(() => setSlow(true), 12000)
+    return () => clearTimeout(t)
+  }, [spinner])
   return (
     <div className="wall grid min-h-dvh place-items-center p-6 text-center text-ink">
       <div className="window w-full max-w-sm p-6">
@@ -281,6 +288,11 @@ function Center({ title, body, spinner, children }: { title: string; body: strin
         </p>
         <p className="mt-1 text-sm text-muted">{body}</p>
         <div className="mt-4 flex justify-center gap-2">
+          {spinner && slow && !children && (
+            <Btn tip="Reload and try signing on again" variant="ghost" onClick={() => location.reload()}>
+              Taking a while? Reload
+            </Btn>
+          )}
           {children ??
             (!spinner && (
               <LinkBtn href="/" tip="Back to the start">

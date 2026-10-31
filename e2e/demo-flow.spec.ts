@@ -58,3 +58,14 @@ test('signing off twice in a row still gets a new guest each time', async ({ pag
   }
   expect(mock.guests).toHaveLength(3)
 })
+
+test('a guest sign-up that hangs offers Try again, which signs on', async ({ page }) => {
+  const mock = await mockSupabase(page, { stallSignups: 1 })
+  await page.goto('/demo')
+  await expect(page.getByRole('status')).toHaveText(/Picking your guest screen name/)
+  const retry = page.getByRole('button', { name: 'Try again' })
+  await expect(retry).toBeVisible({ timeout: 15_000 })
+  await retry.click()
+  await expectSignedOn(page, 'mock_guest_1')
+  expect(mock.guests).toHaveLength(1)
+})

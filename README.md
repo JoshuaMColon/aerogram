@@ -2,8 +2,8 @@
 
 **Real-time chat, styled like airmail.** Public rooms and 1:1 direct letters with live delivery, presence, typing indicators, read receipts, reactions and file sharing. Built on React and Supabase.
 
-- **Live app:** https://aerogram-chat.vercel.app
-- **Guest demo (no sign-up):** https://aerogram-chat.vercel.app/demo
+- **Live app:** https://aerogram-ten.vercel.app
+- **Guest demo (no sign-up):** https://aerogram-ten.vercel.app/demo
 
 ![CI](https://github.com/JoshuaMColon/aerogram/actions/workflows/ci.yml/badge.svg)
 
@@ -84,7 +84,7 @@ Without env vars the app still builds; the landing and sign-in pages render and 
 npm run typecheck && npm run lint
 npm test            # Vitest: merge/grouping, receipts, unread, typing expiry, file validation
 npm run test:e2e    # Playwright + axe on landing/sign-in (light, dark, mobile), tooltips, theme
-BASE_URL=https://aerogram-chat.vercel.app npm run test:live   # two real guest sessions: presence, typing, message, read receipt
+BASE_URL=https://aerogram-ten.vercel.app npm run test:live   # two real guest sessions: presence, typing, message, read receipt
 ```
 
 CI runs typecheck, lint, unit tests, build and the Playwright/axe suite on every push and pull request.

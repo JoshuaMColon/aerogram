@@ -1,26 +1,40 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import { ArrowDown, ArrowLeft, LogOut, Users } from 'lucide-react'
+import { ArrowDown, LogOut, UserPlus, Users } from 'lucide-react'
 import * as api from '../lib/api'
-import { groupMessages, lastOwnMessage, liveTypists, markFailed, mergeMessages, readMark, readersOf, removeMessage, roomTopic, toggleReaction, typingText } from '../lib/logic'
-import type { Member, Message, RoomSummary } from '../lib/types'
+import { groupMessages, lastOwnMessage, markFailed, mergeMessages, readMark, readersOf, removeMessage, roomTopic, toggleReaction } from '../lib/logic'
+import { buddyLive, imTypingText, statusLine, type TypingState } from '../lib/im'
+import { play } from '../lib/sounds'
+import type { Member, Message, MsgStyle, RoomSummary } from '../lib/types'
+import { useBuddies } from '../state/buddies'
 import { roomTitle, useChat } from '../state/chat'
-import { navigate } from '../router'
 import { Composer } from './Composer'
 import { MessageItem } from './MessageItem'
 import { Btn, RoomStamp, Stamp, Tip, useToast } from './ui'
 
 const BOTTOM_SLACK = 120
 
-export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (room: RoomSummary, members: Member[]) => void }) {
-  const { db, me, profiles, ensureProfiles, online, subscribe, refreshRooms, patchRoom } = useChat()
+const TTL: Record<TypingState, number> = { typing: 4500, entered: 13000 }
+
+interface Props {
+  room: RoomSummary
+  /** On screen and in front: marks messages read and focuses the composer. */
+  active: boolean
+  onPeople: (room: RoomSummary, members: Member[]) => void
+  onLeft: () => void
+  onBuzzed: () => void
+}
+
+export function RoomView({ room, active, onPeople, onLeft, onBuzzed }: Props) {
+  const { db, me, profiles, ensureProfiles, online, presence, subscribe, refreshRooms, patchRoom } = useChat()
+  const { buddies, add: addBuddy } = useBuddies()
   const toast = useToast()
   const [msgs, setMsgs] = useState<Message[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const [older, setOlder] = useState(false)
-  const [typists, setTypists] = useState<Record<string, { name: string; at: number }>>({})
+  const [typists, setTypists] = useState<Record<string, { name: string; at: number; state: TypingState }>>({})
   const [, tick] = useState(0)
   const [atBottom, setAtBottom] = useState(true)
   const [fresh, setFresh] = useState(0)
@@ -92,11 +106,11 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
       if (dead) return
       ch = db.channel(roomTopic(roomId), { config: { private: true, broadcast: { self: false } } })
       ch.on('broadcast', { event: 'typing' }, ({ payload }) => {
-        const p = payload as { user_id: string; name: string; on: boolean }
+        const p = payload as { user_id: string; name: string; on: boolean; state?: TypingState }
         if (!p?.user_id || p.user_id === me.id) return
         setTypists((t) => {
           const n = { ...t }
-          if (p.on) n[p.user_id] = { name: String(p.name).slice(0, 32), at: Date.now() }
+          if (p.on) n[p.user_id] = { name: String(p.name).slice(0, 32), at: Date.now(), state: p.state === 'entered' ? 'entered' : 'typing' }
           else delete n[p.user_id]
           return n
         })
@@ -110,7 +124,9 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
     }
   }, [db, roomId, me.id])
 
-  const typingNow = liveTypists(typists)
+  // eslint-disable-next-line react-hooks/purity -- re-evaluated every second by the tick below
+  const now = Date.now()
+  const typingNow = Object.values(typists).filter((t) => now - t.at < TTL[t.state])
   useEffect(() => {
     if (!Object.keys(typists).length) return
     const t = window.setInterval(() => tick((n) => n + 1), 1000)
@@ -118,8 +134,8 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
   }, [typists])
 
   const sendTyping = useCallback(
-    (on: boolean) => {
-      typingCh.current?.send({ type: 'broadcast', event: 'typing', payload: { user_id: me.id, name: me.display_name, on } })
+    (on: boolean, state: TypingState = 'typing') => {
+      typingCh.current?.send({ type: 'broadcast', event: 'typing', payload: { user_id: me.id, name: me.display_name, on, state } })
     },
     [me.id, me.display_name],
   )
@@ -146,7 +162,7 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
       ensureProfiles(page.map((m) => m.user_id))
       setMsgs((cur) => mergeMessages(cur, page))
     } catch (e) {
-      toast(`Couldn't load older letters: ${(e as Error).message}`)
+      toast(`Couldn't load older messages: ${(e as Error).message}`)
     } finally {
       setOlder(false)
     }
@@ -165,7 +181,7 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
   const myMember = members.find((m) => m.user_id === me.id)
   const newest = [...msgs].reverse().find((m) => !m.pending && !m.failed)
   useEffect(() => {
-    if (!newest || !myMember || !atBottom) return
+    if (!newest || !myMember || !atBottom || !active) return
     const mark = readMark(newest)
     if (myMember.last_read_at >= mark) return
     const go = () => {
@@ -177,7 +193,7 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
     go()
     document.addEventListener('visibilitychange', go)
     return () => document.removeEventListener('visibilitychange', go)
-  }, [newest, myMember, atBottom, db, roomId, me.id, patchRoom])
+  }, [newest, myMember, atBottom, active, db, roomId, me.id, patchRoom])
 
   // Sending: optimistic row with a client id; upload first, then insert; the realtime echo merges by id.
   const deliver = useCallback(
@@ -188,7 +204,7 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
           const dims = await api.imageSize(file)
           attachment = await api.uploadFile(db, roomId, me.id, file, dims)
         }
-        const row = await api.sendMessage(db, { id: draft.id, room_id: roomId, user_id: me.id, body: draft.body, attachment })
+        const row = await api.sendMessage(db, { id: draft.id, room_id: roomId, user_id: me.id, body: draft.body, attachment, style: draft.style ?? null, kind: draft.kind ?? 'text' })
         files.current.delete(draft.id)
         setMsgs((cur) => mergeMessages(cur, [row]))
       } catch (e) {
@@ -200,13 +216,15 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
   )
 
   const onSend = useCallback(
-    (body: string, file: File | null) => {
+    (body: string, file: File | null, style: MsgStyle | null = null, kind: 'text' | 'buzz' = 'text') => {
       const id = crypto.randomUUID()
       const draft: Message = {
         id,
         room_id: roomId,
         user_id: me.id,
         body,
+        style,
+        kind,
         reactions: {},
         created_at: new Date().toISOString(),
         edited_at: null,
@@ -219,9 +237,12 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
       stick.current = true
       setMsgs((cur) => mergeMessages(cur, [draft]))
       deliver({ ...draft, attachment: null }, file)
+      play(kind === 'buzz' ? 'buzz' : 'send')
+      if (kind === 'buzz') onBuzzed()
     },
-    [roomId, me.id, deliver],
+    [roomId, me.id, deliver, onBuzzed],
   )
+  const onBuzz = useCallback(() => onSend('BUZZ!', null, null, 'buzz'), [onSend])
 
   const onRetry = useCallback(
     (m: Message) => {
@@ -282,7 +303,7 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
     try {
       await api.leaveRoom(db, roomId, me.id)
       await refreshRooms()
-      navigate('/app')
+      onLeft()
     } catch (e) {
       toast(`Couldn't leave: ${(e as Error).message}`)
     }
@@ -293,27 +314,22 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
   const readers = ownLast ? readersOf(members, ownLast, me.id) : []
   const onlineHere = members.filter((m) => online.has(m.user_id) || m.user_id === me.id).length
   const dmOther = room.kind === 'dm' && room.dm_user ? profiles[room.dm_user] : undefined
-  const typing = typingText(typingNow.map((t) => t.name))
+  const typing = imTypingText(typingNow)
+  const otherLive = room.dm_user ? buddyLive(dmOther, presence[room.dm_user]) : null
+  const canAdd = room.kind === 'dm' && !!room.dm_user && !buddies.has(room.dm_user) && !!dmOther
 
   return (
-    <section aria-label={title} className="flex h-full min-h-0 flex-1 flex-col">
-      <header className="relative flex items-center gap-2 border-b border-line bg-paper-hi px-2 py-2 sm:px-4">
-        <div className="md:hidden">
-          <Btn tip="Back to all rooms" iconOnly variant="plain" onClick={() => navigate('/app')}>
-            <ArrowLeft size={20} aria-hidden="true" />
-          </Btn>
-        </div>
-        {room.kind === 'dm' ? <Stamp name={title} stamp={dmOther?.stamp ?? 0} size={38} online={!!room.dm_user && online.has(room.dm_user)} bot={dmOther?.is_bot} /> : <RoomStamp size={38} />}
+    <section aria-label={room.kind === 'dm' ? `IM with ${title}` : `#${room.slug ?? title}`} className="flex h-full min-h-0 flex-1 flex-col">
+      <header className="flex items-center gap-2 border-b border-line bg-paper px-2 py-1.5">
+        {room.kind === 'dm' ? <Stamp name={title} stamp={dmOther?.stamp ?? 0} size={30} state={otherLive?.state} bot={dmOther?.is_bot} /> : <RoomStamp size={30} />}
         <div className="min-w-0 flex-1">
-          <h1 className="truncate font-display text-lg font-semibold leading-tight">{title}</h1>
-          <p className="truncate text-xs text-muted">
+          <p className="truncate text-[0.82rem] font-extrabold leading-tight">{room.kind === 'dm' ? title : `#${room.slug ?? title}`}</p>
+          <p className={`truncate text-[11px] ${otherLive?.away ? 'italic text-brass' : 'text-muted'}`} data-testid="im-status">
             {room.kind === 'dm' ? (
               dmOther?.is_bot ? (
-                'Friendly bot · replies to a few keywords'
-              ) : room.dm_user && online.has(room.dm_user) ? (
-                'Online now'
+                `${statusLine(otherLive!, dmOther, undefined, me.display_name)} · bot`
               ) : (
-                'Direct letter'
+                statusLine(otherLive!, dmOther, undefined, me.display_name)
               )
             ) : (
               <>
@@ -323,23 +339,38 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
             )}
           </p>
         </div>
+        {canAdd && (
+          <Btn
+            tip={`Add ${title} to your Buddy List`}
+            iconOnly
+            size="sm"
+            variant="plain"
+            onClick={() =>
+              addBuddy(dmOther!.display_name, null).then(
+                () => toast(`${title} added to Buddies`),
+                (e: Error) => toast(e.message),
+              )
+            }
+          >
+            <UserPlus size={17} aria-hidden="true" />
+          </Btn>
+        )}
         {room.kind === 'public' && (
           <>
-            <Btn tip="People in this room" iconOnly variant="plain" onClick={() => onPeople(room, members)}>
-              <Users size={19} aria-hidden="true" />
+            <Btn tip="People in this room" iconOnly size="sm" variant="plain" onClick={() => onPeople(room, members)}>
+              <Users size={17} aria-hidden="true" />
             </Btn>
-            <Btn tip="Leave this room" iconOnly variant="plain" onClick={leave}>
-              <LogOut size={18} aria-hidden="true" />
+            <Btn tip="Leave this room" iconOnly size="sm" variant="plain" onClick={leave}>
+              <LogOut size={16} aria-hidden="true" />
             </Btn>
           </>
         )}
-        <div className="airmail-edge absolute inset-x-0 -bottom-[3px] h-[3px]" aria-hidden="true" />
       </header>
 
       <div
         ref={scroller}
         onScroll={onScroll}
-        className="scroll-thin relative min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3"
+        className="scroll-thin relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-card pb-2"
         role="log"
         aria-live="polite"
         aria-relevant="additions"
@@ -359,12 +390,12 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
             <div className="px-5 pb-2 pt-6 text-center">
               {hasMore ? (
                 <Btn tip="Load earlier messages" size="xs" variant="ghost" onClick={loadOlder} disabled={older}>
-                  {older ? 'Fetching older letters…' : 'Load earlier letters'}
+                  {older ? 'Loading…' : 'Load earlier messages'}
                 </Btn>
               ) : (
                 <div className="mx-auto max-w-sm">
-                  <p className="font-display text-xl font-semibold">{room.kind === 'dm' ? `Letters with ${title}` : `Welcome to #${room.slug ?? title}`}</p>
-                  <p className="mt-1 text-sm text-muted">{room.kind === 'dm' ? 'Only the two of you can read these.' : room.topic || 'The very first letter starts here.'}</p>
+                  <p className="text-base font-extrabold">{room.kind === 'dm' ? `IM with ${title}` : `You've entered #${room.slug ?? title}`}</p>
+                  <p className="mt-0.5 text-xs text-muted">{room.kind === 'dm' ? 'Only the two of you can read these.' : room.topic || 'Say hi to get things started.'}</p>
                 </div>
               )}
             </div>
@@ -372,7 +403,7 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
               r.type === 'day' ? (
                 <div key={r.key} className="my-4 flex items-center gap-3 px-5" role="separator">
                   <span className="h-px flex-1 bg-line" />
-                  <span className="postmark px-3 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-widest text-brass">{r.label}</span>
+                  <span className="postmark px-3 py-0.5 font-pixel text-[10px] uppercase text-blue">{r.label}</span>
                   <span className="h-px flex-1 bg-line" />
                 </div>
               ) : (
@@ -383,7 +414,6 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
                     author={profiles[r.msg.user_id]}
                     me={me.id}
                     first={r.first}
-                    online={online.has(r.msg.user_id)}
                     profiles={profiles}
                     selected={selected === r.msg.id}
                     onSelect={setSelected}
@@ -434,7 +464,7 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
         {fresh > 0 && !atBottom && (
           <div className="absolute -top-12 left-1/2 z-10 -translate-x-1/2">
             <Btn
-              tip="Jump to the newest letters"
+              tip="Jump to the newest messages"
               size="sm"
               variant="blue"
               className="pop shadow-lg"
@@ -444,11 +474,11 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
                 setFresh(0)
               }}
             >
-              <ArrowDown size={15} aria-hidden="true" /> {fresh} new {fresh === 1 ? 'letter' : 'letters'}
+              <ArrowDown size={15} aria-hidden="true" /> {fresh} new {fresh === 1 ? 'message' : 'messages'}
             </Btn>
           </div>
         )}
-        <p className="h-5 truncate px-5 text-xs italic text-muted" aria-live="polite" data-testid="typing">
+        <p className="h-5 truncate px-3 text-[11px] italic text-muted" aria-live="polite" data-testid="typing">
           {typing && (
             <>
               <span className="typing-dots mr-1.5 inline-flex gap-0.5 align-middle" aria-hidden="true">
@@ -460,7 +490,7 @@ export function RoomView({ room, onPeople }: { room: RoomSummary; onPeople: (roo
             </>
           )}
         </p>
-        <Composer roomName={room.kind === 'dm' ? title : `#${room.slug ?? title}`} onSend={onSend} onTyping={sendTyping} />
+        <Composer roomName={room.kind === 'dm' ? title : `#${room.slug ?? title}`} autoFocus={active} onSend={onSend} onTyping={sendTyping} onBuzz={room.kind === 'dm' ? onBuzz : undefined} />
       </div>
     </section>
   )

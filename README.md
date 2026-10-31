@@ -1,56 +1,67 @@
-# Aerogram ✉️
+# Buddyline 💬
 
-**Real-time chat, styled like airmail.** Public rooms and 1:1 direct letters with live delivery, presence, typing indicators, read receipts, reactions and file sharing. Built on React and Supabase.
+**Instant messaging, the way you remember it.** A modern take on the early-2000s buddy-list messenger: a Buddy List home with groups and away messages, floating IM windows, door-open sign-on chimes and a window-shaking Buzz, all running live on React and Supabase.
+
+> Buddyline is an original design. It is not affiliated with, and uses no names, logos, artwork or sounds from, any classic messenger. Every sound is synthesized in the browser with the Web Audio API.
 
 - **Live app:** https://aerogram-ten.vercel.app
 - **Guest demo (no sign-up):** https://aerogram-ten.vercel.app/demo
+
+The repo and Vercel project keep their original `aerogram` names (and URLs) so existing links and deployments keep working.
 
 ![CI](https://github.com/JoshuaMColon/aerogram/actions/workflows/ci.yml/badge.svg)
 
 ## Features
 
-| | |
-| --- | --- |
-| **Accounts** | Email sign-up / sign-in with Supabase Auth, plus a one-click **guest pass** at `/demo` (anonymous sign-in; guests and their files are removed automatically after a day). |
-| **Rooms & DMs** | Seeded public rooms with a cast of friendly regulars, create or browse/join public rooms, leave them, and start 1:1 direct letters with anyone. **Pip**, the concierge bot, answers DMs instantly with canned tips (no AI). |
-| **Live delivery** | New, edited and withdrawn messages arrive over Supabase Realtime (Postgres changes, filtered by RLS). |
-| **Presence** | Who's online across Aerogram (Realtime Presence on a private channel), shown as green dots and per-room online counts. |
-| **Typing** | "Hana is writing…" via Realtime Broadcast on a private per-room channel, throttled and auto-expiring. |
-| **Read receipts & unread** | Per-member read markers: "Read ✓" in DMs, "Seen by N" stamps in rooms, wax-seal unread badges and an unread count in the tab title. |
-| **Reactions, edit, delete** | Emoji reactions with who-reacted tooltips, inline edit (marked *edited*), and soft delete ("withdrawn") that also removes the attachment. |
-| **Files** | Images and files (PNG, JPEG, WebP, GIF, PDF, TXT, CSV, MD, ZIP, JSON; up to 5 MB) via attach, paste or drag-and-drop, stored in a private bucket and served with short-lived signed URLs. |
-| **Feels fast** | Optimistic sends with retry/discard on failure, infinite scroll back through history with scroll anchoring, a "new letters" jump button. |
-| **Everywhere** | Responsive list/room layout for phones, light (**Airmail**) and dark (**Night Mail**) themes, styled tooltips on every button, pressed-state feedback on every control, keyboard friendly and axe-checked. |
+|                             |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Screen names**            | Pick a screen name on sign-up (3–20 letters, numbers, spaces, `_ . -`, unique ignoring case). Guests at `/demo` get a generated one like `xXSkaterHeronXx` or `sk8r_finch98`. Profiles carry a buddy icon and a short bio.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Buddy List**              | The home screen. Collapsible groups (**Buddies**, **Family**, **Co-Workers**, plus your own), each with an online/total count, and an **Offline** section. Add buddies by screen name, remove them, rename or delete groups, and move buddies by drag-and-drop or the ⋯ menu. Hover a buddy for their away message, bio or status.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **Presence**                | Available, Away and Idle (after 5 minutes without input, shown as "Idle 12m"), plus "last seen" for offline buddies. Status lives in Postgres (`chat.profiles`) and is mirrored live over Realtime Presence.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Away messages**           | Set a custom away message or pick a preset (with fun defaults; your custom ones are saved). It shows under your name, in hover cards and in IM headers, and anyone who IMs you while you are away gets **one** automatic "Auto response from …" per away spell, sent by the database. `%n` and `%t` expand to the reader's screen name and the time (the database fills them in when it sends the reply, and you never see your own name in your own message).                                                                                                                                                                                                                                                                              |
+| **IM windows**              | On desktop, IMs and chat rooms open as floating windows you can drag, resize, stack, minimize to a taskbar and restore (they remember where you left them). Incoming IMs pop a window without stealing focus. On phones they become full-screen tabs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Buzz**                    | Shake your buddy's IM window (and play a buzz) with a short cooldown. Reduced-motion users get a highlight instead of a shake.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Typing**                  | The classic pair: "Hana is typing..." while keys are moving and "Hana has entered text." when they pause with a draft.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Sign-on toasts & sounds** | Buddies signing on or off show a toast with a door-open or door-close chime. All sounds (door open/close, message blip, buzz) are synthesized with Web Audio; a mute toggle sits in the Buddy List footer (on by default; the choice is remembered).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Formatting & smileys**    | Bold, italic, underline, seven colors and three sizes per message (stored as a sanitized style object, never raw HTML), plus classic text smileys like `:-)` `;-)` `:-P` `B-)` rendered as original icons.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Still a real chat app**   | Public chat rooms, DMs, read receipts, reactions, edit and delete, file sharing (images, PDF, text, ZIP; 5 MB), optimistic sends with retry, infinite history and Pip, the canned-reply bot (no AI).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Skins**                   | An **Appearance** panel (the palette button in the Buddy List footer or on the landing page) with eight built-in skins and live preview: **Chrome** (graphite/steel with a crisp blue, the light default), **Midnight** (the dark default), **Terminal**, **Arcade**, **Classic**, **Ocean**, **Sunset** and **Daydream**. On top of any skin you can change the accent color, wallpaper (solid, gradient, dots, grid, stripes, scanlines, with its own color), window chrome (glossy, flat, bevel), corner roundness, font (Inter, Nunito, Space Grotesk, Chakra Petch, Plex Mono, System), text size, density, chat style (classic lines, bubbles, cards) and buddy icon shape. Randomize, Reset to the skin and Revert are one tap away. |
+| **Everywhere**              | Every text color is checked against the surfaces it sits on and nudged until it passes WCAG AA (4.5:1), and text on the accent flips between white and near-black, so custom colors stay readable. Tooltips on every button, pressed-state feedback on every control, keyboard friendly and axe-checked on every skin.                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ## Design
 
-Aerogram borrows from the airmail envelope: cream paper, red-and-blue chevron borders, perforated postage stamps for avatars and rooms, circular postmarks for day dividers, and wax-seal unread badges. Type is **Fraunces** (display), **Public Sans** (UI) and **IBM Plex Mono** (timestamps and labels). Night Mail swaps the paper for a deep navy envelope with the same accents.
+Glossy early-2000s hardware, redrawn cleanly: brushed steel title bars with a blue accent line, pill buttons, a cool graphite desktop "wall" and a taskbar. Type is **Inter** by default with a pixel accent font for labels; Midnight is the same chrome in deep navy glass. Skins are stored as small overrides on top of a preset (`{v, preset, accent?, bg?, …}`) and turned into CSS variables by `src/lib/skins.ts`; a tiny `public/theme-init.js` paints the last skin before React loads, so there is no flash. Nothing is copied from any real messenger: the logo, icons and smileys are original SVG, and the sounds are generated at runtime.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
   subgraph Browser["Browser (React 19 + Vite + Tailwind 4)"]
-    UI[Sidebar · RoomView · Composer] --> State[AuthProvider · ChatProvider]
+    UI[BuddyList · ImWindow · RoomView · Composer] --> State[AuthProvider · ChatProvider · BuddyProvider · WindowProvider]
+    State --> Audio[Web Audio synth]
   end
   State -- "PostgREST: public.chat_* views + RPCs" --> PG[(Postgres<br/>chat schema + RLS)]
   State -- "Postgres changes (messages, members, rooms)" --> RT((Supabase Realtime))
-  State -- "Presence: chat:lobby<br/>Broadcast: chat:room:&lt;id&gt;" --> RT
+  State -- "Presence: chat:lobby (status, away, idle)<br/>Broadcast: chat:room:&lt;id&gt; (typing)" --> RT
   State -- "signed URLs / uploads" --> ST[(Storage<br/>chat-files bucket)]
   State -- "email + anonymous sign-in" --> AU[Supabase Auth]
-  RT -- "RLS on realtime.messages" --> PG
-  ST -- "policies: room membership" --> PG
+  PG -- "triggers: away auto-response, Pip" --> PG
   Cron[pg_cron: daily guest cleanup] --> AU
   Vercel[Vercel static hosting] -.serves.-> Browser
 ```
 
 - **No server code.** The SPA talks straight to Supabase; every rule lives in Postgres.
-- **Data API surface.** The `chat` schema is not exposed directly; the client uses `security_invoker` views (`public.chat_messages`, `chat_members`, `chat_rooms`, `chat_profiles`) so RLS still applies, plus a few `SECURITY DEFINER` RPCs for multi-row operations (`chat_my_rooms`, `chat_public_rooms`, `chat_create_room`, `chat_open_dm`, `chat_toggle_reaction`, `chat_ensure_profile`).
-- **Realtime.** One Postgres-changes channel per user (RLS decides what each user receives), one private presence channel for the whole app, and one private broadcast channel per open room for typing.
+- **Data API surface.** The `chat` schema is not exposed directly; the client uses `security_invoker` views (`public.chat_messages`, `chat_members`, `chat_rooms`, `chat_profiles`) so RLS still applies, plus `SECURITY DEFINER` RPCs for multi-row work: rooms and DMs (`chat_my_rooms`, `chat_public_rooms`, `chat_create_room`, `chat_open_dm`, `chat_toggle_reaction`, `chat_ensure_profile`) and the buddy list (`chat_buddy_list`, `chat_add_buddy`, `chat_remove_buddy`, `chat_move_buddy`, `chat_save_group`, `chat_delete_group`, `chat_set_presence`, `chat_away_presets`, `chat_save_away_presets`), plus invoker RPCs for skins (`chat_my_skin`, `chat_save_skin`).
+- **Realtime.** One Postgres-changes channel per user (RLS decides what each user receives), one private presence channel for the whole app carrying status, away message and idle time, and one private broadcast channel per open window for typing.
 
 ## Schema & security notes
 
-Tables: `chat.profiles`, `chat.rooms` (`public` or `dm`), `chat.members` (with `last_read_at`), `chat.messages` (body, JSON attachment, `reactions`, `edited_at`, `deleted_at`).
+Tables: `chat.profiles` (screen name, icon, bio, status, away message, idle and last-seen times, saved away presets), `chat.rooms` (`public` or `dm`), `chat.members` (with `last_read_at`), `chat.messages` (body, JSON attachment, `reactions`, `style`, `kind` = `text` / `buzz` / `away`, `edited_at`, `deleted_at`), `chat.buddy_groups` and `chat.buddies` (each user's own list), `chat.away_replies` (internal: one auto response per sender per away spell) and `chat.settings` (your saved skin).
+
+- **Your list is yours.** Buddy groups and buddies are readable and writable only by their owner (RLS on `owner = auth.uid()`); adding a buddy needs their exact screen name.
+- **Status is yours.** Only you can change your status, away message or idle flag (via `chat_set_presence`); a trigger blocks direct edits to those columns and validates screen names.
+- **Your skin follows you.** Signed-in accounts save their skin to `chat.settings` (RLS: read, insert and update only your own row; 2 KB cap; a sanitizer keeps only known keys and valid values), so it syncs across devices. Guests keep theirs in `localStorage`.
+- **Auto responses and Buzz.** Away auto responses are written by a database trigger, never by the client; clients may only send `text` or `buzz` messages, buzzes are DM-only and rate-limited, and formatting is reduced to a fixed allow-list.
 
 - **Members only.** Messages and members are readable only by members of the room; public rooms are listed to every signed-in user, but their messages need a membership row (joining inserts one).
 - **Authorship.** You can only post as yourself, only edit or withdraw your own messages, and only update your own membership row (read marker). A trigger blocks changes to anything but the body/reaction fields and validates attachments (path must be `<room>/<you>/…`).
@@ -59,7 +70,7 @@ Tables: `chat.profiles`, `chat.rooms` (`public` or `dm`), `chat.members` (with `
 - **Storage.** Private `chat-files` bucket, 5 MB limit and a MIME allow-list. Policies: read if you are a member of the room in the path, upload only into `<room>/<your id>/` of a room you belong to, delete only your own files.
 - **Guest cleanup.** Anonymous users older than a day are deleted by a scheduled job; their profile, memberships and messages cascade, and their files are purged.
 
-The full migration is in [`supabase/migrations`](supabase/migrations).
+The migrations are in [`supabase/migrations`](supabase/migrations).
 
 ## Stack
 
@@ -68,13 +79,13 @@ React 19 · TypeScript · Vite · Tailwind CSS 4 · Supabase (Auth, Postgres, Re
 ## Run it locally
 
 ```bash
-git clone https://github.com/JoshuaMColon/aerogram && cd aerogram
+git clone https://github.com/JoshuaMColon/aerogram buddyline && cd buddyline
 npm install
 cp .env.example .env.local   # fill in your project URL and publishable/anon key
 npm run dev
 ```
 
-To use your own Supabase project, run the migration in `supabase/migrations` (SQL editor or `supabase db push`), enable **anonymous sign-ins** for the guest demo, and add `http://localhost:5173/**` and your deployed URL to the Auth redirect list.
+To use your own Supabase project, run the migrations in `supabase/migrations` in order (SQL editor or `supabase db push`), enable **anonymous sign-ins** for the guest demo, and add `http://localhost:5173/**` and your deployed URL to the Auth redirect list.
 
 Without env vars the app still builds; the landing and sign-in pages render and explain that no backend is configured.
 
@@ -82,9 +93,14 @@ Without env vars the app still builds; the landing and sign-in pages render and 
 
 ```bash
 npm run typecheck && npm run lint
-npm test            # Vitest: merge/grouping, receipts, unread, typing expiry, file validation
-npm run test:e2e    # Playwright + axe on landing/sign-in (light, dark, mobile), tooltips, theme
-BASE_URL=https://aerogram-ten.vercel.app npm run test:live   # two real guest sessions: presence, typing, message, read receipt
+npm test            # Vitest: grouping, receipts, unread, files, screen names, buddy sections, idle/away text, smileys, window layout, skin contrast (every preset plus 300 random skins)
+npm run test:e2e    # Playwright + axe on landing/sign-in (light, dark, mobile), tooltips, theme, demo sign-off → Try the demo (against a mocked Supabase), every skin with the customizer open, custom choices, phone customizer
+BASE_URL=https://aerogram-ten.vercel.app SHOTS_DIR=shots npm run test:live
+# two real guest sessions: add buddy, sign-off/sign-on toasts, IM window auto-open, read receipt,
+# "is typing..." / "has entered text.", away message + exactly one auto response, Buzz, theme, mobile.
+# Prints the guest ids it created so you can delete them (they also expire after a day).
+BASE_URL=http://localhost:4173 SHOTS_DIR=shots/skins node scripts/skins-shots.mjs
+# two guests: %n auto-reply check, every skin live, a custom combo and the phone customizer (VIDEO_DIR records it).
 ```
 
 CI runs typecheck, lint, unit tests, build and the Playwright/axe suite on every push and pull request.

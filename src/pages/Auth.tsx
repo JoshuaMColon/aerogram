@@ -3,16 +3,16 @@ import { Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { navigate, useLocation } from '../router'
 import { useAuth } from '../state/auth'
-import { Btn, LinkBtn, Wordmark } from '../components/ui'
+import { Btn, LinkBtn, Logo, Wordmark } from '../components/ui'
+import { screenNameError } from '../lib/im'
 
 const field = 'mt-1 h-11 w-full rounded-lg border border-line bg-paper-hi px-3 text-[0.95rem] font-normal outline-none placeholder:text-muted focus:border-blue'
 
 function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-paper text-ink">
-      <div className="airmail h-1.5" aria-hidden="true" />
+    <div className="wall min-h-dvh text-ink">
       <header className="mx-auto flex max-w-5xl items-center px-5 py-4">
-        <a href="/" onClick={(e) => (e.preventDefault(), navigate('/'))} className="press text-2xl" title="Aerogram home">
+        <a href="/" onClick={(e) => (e.preventDefault(), navigate('/'))} className="press text-2xl" title="Buddyline home">
           <Wordmark />
         </a>
       </header>
@@ -43,6 +43,8 @@ export function Login() {
     try {
       if (isGuest) await supabase.auth.signOut()
       if (mode === 'up') {
+        const bad = name.trim() ? screenNameError(name) : null
+        if (bad) throw new Error(bad)
         const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/app`, data: { display_name: name.trim() || undefined } } })
         if (error) throw error
         if (!data.session) setMsg({ tone: 'good', text: 'Almost there: open the confirmation link we just emailed you, then sign in.' })
@@ -61,75 +63,99 @@ export function Login() {
     <Frame>
       <div className="grid items-start gap-10 md:grid-cols-[1fr_26rem]">
         <div className="pt-4">
-          <p className="postmark inline-block px-3 py-0.5 font-mono text-xs font-semibold uppercase tracking-widest text-red">{mode === 'in' ? 'Return to sender' : 'First class'}</p>
-          <h1 className="mt-4 font-display text-4xl font-semibold leading-tight sm:text-5xl">{mode === 'in' ? 'Welcome back to the post room.' : 'Get your own stamp.'}</h1>
-          <p className="mt-4 max-w-md text-muted">An account keeps your rooms, letters and files. Just looking? The guest pass needs no sign-up and tidies itself away after a day.</p>
+          <p className="inline-block rounded-full border border-line bg-paper-hi px-3 py-1 font-pixel text-[10px] uppercase text-blue">{mode === 'in' ? 'Welcome back' : 'New screen name'}</p>
+          <h1 className="mt-4 font-display text-4xl font-black leading-tight sm:text-5xl">{mode === 'in' ? 'Sign on. Your buddies missed you.' : 'Claim your screen name.'}</h1>
+          <p className="mt-4 max-w-md text-muted">
+            An account keeps your screen name, Buddy List, away messages and IMs. Just looking? The demo signs you on with a guest screen name that tidies itself away after a day.
+          </p>
           {isGuest && (
-            <p className="mt-4 max-w-md rounded-lg border border-dashed border-edge p-3 text-sm">You’re on a guest pass. Signing in starts a separate mailbox; guest letters aren’t moved over.</p>
+            <p className="mt-4 max-w-md rounded-lg border border-dashed border-edge p-3 text-sm">
+              You’re signed on as a guest. Signing in starts a separate account; guest IMs and buddies aren’t moved over.
+            </p>
           )}
         </div>
-        <div className="letter-theirs relative overflow-hidden rounded-xl p-6 shadow-[var(--shadow)]">
-          <div className="airmail-edge absolute inset-x-0 top-0 h-1.5" aria-hidden="true" />
-          <div role="tablist" aria-label="Account" className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-sunk p-1">
-            {(['in', 'up'] as const).map((m) => (
-              <Btn
-                key={m}
-                tip={m === 'in' ? 'I already have an account' : 'Create a new account'}
-                role="tab"
-                aria-selected={mode === m}
-                variant={mode === m ? 'ghost' : 'plain'}
-                size="sm"
-                block
-                onClick={() => (setMode(m), setMsg(null))}
-              >
-                {m === 'in' ? 'Sign in' : 'Sign up'}
-              </Btn>
-            ))}
+        <div className="window relative overflow-hidden">
+          <div className="titlebar flex h-9 items-center gap-2 px-3 text-sm font-extrabold" data-active="true">
+            <Logo size="1.2em" /> {mode === 'in' ? 'Sign On' : 'Sign Up'}
           </div>
-          {!supabase ? (
-            <p className="text-sm text-muted">Accounts are unavailable in this build (no Supabase configuration).</p>
-          ) : (
-            <form onSubmit={submit} className="space-y-4">
-              {mode === 'up' && (
+          <div className="p-6">
+            <div role="tablist" aria-label="Account" className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-sunk p-1">
+              {(['in', 'up'] as const).map((m) => (
+                <Btn
+                  key={m}
+                  tip={m === 'in' ? 'I already have an account' : 'Create a new account'}
+                  role="tab"
+                  aria-selected={mode === m}
+                  variant={mode === m ? 'ghost' : 'plain'}
+                  size="sm"
+                  block
+                  onClick={() => (setMode(m), setMsg(null))}
+                >
+                  {m === 'in' ? 'Sign on' : 'Sign up'}
+                </Btn>
+              ))}
+            </div>
+            {!supabase ? (
+              <p className="text-sm text-muted">Accounts are unavailable in this build (no Supabase configuration).</p>
+            ) : (
+              <form onSubmit={submit} className="space-y-4">
+                {mode === 'up' && (
+                  <label className="block text-sm font-semibold">
+                    Screen name
+                    <input
+                      maxLength={20}
+                      autoComplete="username"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. SunsetRider04"
+                      className={field}
+                      aria-describedby="sn-help"
+                    />
+                    <span id="sn-help" className={`mt-1 block text-xs font-normal ${name.trim() && screenNameError(name) ? 'text-bad' : 'text-muted'}`}>
+                      {(name.trim() && screenNameError(name)) || '3–20 letters, numbers, spaces, dots, dashes or underscores. If it’s taken we’ll add a number.'}
+                    </span>
+                  </label>
+                )}
                 <label className="block text-sm font-semibold">
-                  Display name
-                  <input maxLength={32} autoComplete="nickname" value={name} onChange={(e) => setName(e.target.value)} placeholder="How you’ll appear" className={field} />
+                  Email
+                  <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
                 </label>
-              )}
-              <label className="block text-sm font-semibold">
-                Email
-                <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
-              </label>
-              <label className="block text-sm font-semibold">
-                Password
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={field}
-                />
-                {mode === 'up' && <span className="mt-1 block text-xs font-normal text-muted">At least 8 characters.</span>}
-              </label>
-              {msg && (
-                <p role="alert" className={`rounded-lg border p-3 text-sm ${msg.tone === 'good' ? 'border-good text-good' : 'border-bad bg-bad-bg text-bad'}`}>
-                  {msg.text}
-                </p>
-              )}
-              <Btn tip={mode === 'in' ? 'Sign in with this email and password' : 'Create the account'} type="submit" variant="red" size="lg" block disabled={busy}>
-                {busy && <Loader2 aria-hidden="true" className="animate-spin" size={18} />}
-                {mode === 'in' ? 'Sign in' : 'Create account'}
-              </Btn>
-            </form>
-          )}
-          <p className="mt-5 text-center text-sm text-muted">
-            No account?{' '}
-            <a href="/demo" title="Start a guest pass with no sign-up" className="font-semibold text-blue underline underline-offset-2" onClick={(e) => (e.preventDefault(), navigate('/demo'))}>
-              Try the demo
-            </a>
-          </p>
+                <label className="block text-sm font-semibold">
+                  Password
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={field}
+                  />
+                  {mode === 'up' && <span className="mt-1 block text-xs font-normal text-muted">At least 8 characters.</span>}
+                </label>
+                {msg && (
+                  <p role="alert" className={`rounded-lg border p-3 text-sm ${msg.tone === 'good' ? 'border-good text-good' : 'border-bad bg-bad-bg text-bad'}`}>
+                    {msg.text}
+                  </p>
+                )}
+                <Btn tip={mode === 'in' ? 'Sign in with this email and password' : 'Create the account'} type="submit" variant="red" size="lg" block disabled={busy}>
+                  {busy && <Loader2 aria-hidden="true" className="animate-spin" size={18} />}
+                  {mode === 'in' ? 'Sign on' : 'Create account'}
+                </Btn>
+              </form>
+            )}
+            <p className="mt-5 text-center text-sm text-muted">
+              No account?{' '}
+              <a
+                href="/demo"
+                title="Sign on with a guest screen name, no sign-up"
+                className="font-semibold text-blue underline underline-offset-2"
+                onClick={(e) => (e.preventDefault(), navigate('/demo'))}
+              >
+                Try the demo
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </Frame>
@@ -145,9 +171,11 @@ export function Demo() {
     if (!supabase || !ready) return
     if (session) return navigate('/app', true)
     let live = true
-    demoStart ??= supabase.auth.signInAnonymously()
-    demoStart.then(({ error }) => {
-      if (error) demoStart = null
+    // Shared so a StrictMode double-run makes one guest, but cleared once it settles:
+    // after a sign-off, the next visit to /demo has to start a fresh guest.
+    const start = (demoStart ??= supabase.auth.signInAnonymously())
+    start.then(({ error }) => {
+      if (demoStart === start) demoStart = null
       if (live && error) setErr(error.message)
     })
     return () => {
@@ -159,7 +187,7 @@ export function Demo() {
       <div className="mx-auto max-w-md pt-16 text-center">
         {err ? (
           <>
-            <h1 className="font-display text-3xl font-semibold">Couldn’t issue a guest pass</h1>
+            <h1 className="font-display text-3xl font-black">Couldn’t sign you on as a guest</h1>
             <p role="alert" className="mt-2 text-bad">
               {err}
             </p>
@@ -171,11 +199,13 @@ export function Demo() {
           </>
         ) : (
           <>
-            <div className="airmail mx-auto mb-5 h-2 w-28 animate-pulse rounded-full" aria-hidden="true" />
-            <h1 className="font-display text-3xl font-semibold" role="status">
-              Stamping your guest pass…
+            <div className="mx-auto mb-5 w-fit animate-pulse" aria-hidden="true">
+              <Logo size={56} />
+            </div>
+            <h1 className="font-display text-3xl font-black" role="status">
+              Picking your guest screen name…
             </h1>
-            <p className="mt-2 text-sm text-muted">No sign-up. Your guest letters and files are cleared after a day.</p>
+            <p className="mt-2 text-sm text-muted">No sign-up. Your guest IMs and files are cleared after a day.</p>
           </>
         )}
       </div>

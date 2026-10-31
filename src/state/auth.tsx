@@ -4,8 +4,6 @@ import { supabase } from '../lib/supabase'
 import { ensureProfile } from '../lib/api'
 import type { Profile } from '../lib/types'
 
-type Theme = 'light' | 'dark'
-
 interface AuthState {
   ready: boolean
   session: Session | null
@@ -14,8 +12,6 @@ interface AuthState {
   profileError: string | null
   setProfile: (p: Profile) => void
   signOut: () => Promise<void>
-  theme: Theme
-  toggleTheme: () => void
 }
 
 const Ctx = createContext<AuthState | null>(null)
@@ -27,7 +23,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
-  const [theme, setTheme] = useState<Theme>(() => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'))
 
   useEffect(() => {
     if (!supabase) return
@@ -61,16 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid])
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0d1424' : '#f3ecdc')
-    try {
-      localStorage.setItem('aerogram:theme', theme)
-    } catch {
-      /* private mode */
-    }
-  }, [theme])
-
   const signOut = useCallback(async () => {
     await supabase?.auth.signOut()
     ensuring = null
@@ -86,10 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileError,
       setProfile,
       signOut,
-      theme,
-      toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
     }),
-    [ready, session, uid, profile, profileError, signOut, theme],
+    [ready, session, uid, profile, profileError, signOut],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

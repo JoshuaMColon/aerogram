@@ -6,6 +6,11 @@ export interface Profile {
   is_bot: boolean
   is_guest: boolean
   created_at: string
+  status?: 'online' | 'away'
+  away_message?: string | null
+  away_since?: string | null
+  idle_since?: string | null
+  last_seen_at?: string | null
 }
 
 export interface Attachment {
@@ -29,6 +34,10 @@ export interface Message {
   created_at: string
   edited_at: string | null
   deleted_at: string | null
+  /** Whole-message formatting from the IM toolbar. */
+  style?: MsgStyle | null
+  /** 'buzz' shakes the window; 'away' is a server-sent auto-reply. */
+  kind?: 'text' | 'buzz' | 'away'
   /** Client-only: optimistic send in flight / failed, and a local preview for images. */
   pending?: boolean
   failed?: string
@@ -76,4 +85,33 @@ export interface PresenceMeta {
   name: string
   stamp: number
   online_at: string
+  status?: 'online' | 'away'
+  away?: string | null
+  idle_since?: string | null
 }
+
+export type StyleColor = 'red' | 'orange' | 'green' | 'teal' | 'blue' | 'purple' | 'pink'
+export interface MsgStyle {
+  b?: boolean
+  i?: boolean
+  u?: boolean
+  color?: StyleColor
+  size?: 's' | 'l'
+}
+
+export interface BuddyGroup {
+  id: string
+  name: string
+  sort: number
+}
+export interface BuddyEntry {
+  buddy: string
+  group_id: string
+}
+export interface BuddyListData {
+  groups: BuddyGroup[]
+  buddies: BuddyEntry[]
+}
+
+/** Live + persisted state of one person, merged from presence meta and their profile row. */
+export type BuddyState = 'online' | 'away' | 'idle' | 'offline'

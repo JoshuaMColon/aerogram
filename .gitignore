@@ -8,3 +8,4 @@ playwright-report
 test-results
 *.tsbuildinfo
 dist-e2e
+dist-e2e-mock

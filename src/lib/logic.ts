@@ -7,7 +7,15 @@ export function iso(t: string | null | undefined): string {
   return t ? new Date(t).toISOString() : (t as unknown as string)
 }
 export function normMessage(m: Message): Message {
-  return { ...m, created_at: iso(m.created_at), edited_at: m.edited_at && iso(m.edited_at), deleted_at: m.deleted_at && iso(m.deleted_at), reactions: m.reactions ?? {} }
+  return {
+    ...m,
+    created_at: iso(m.created_at),
+    edited_at: m.edited_at && iso(m.edited_at),
+    deleted_at: m.deleted_at && iso(m.deleted_at),
+    reactions: m.reactions ?? {},
+    kind: m.kind ?? 'text',
+    style: m.style ?? null,
+  }
 }
 export function normMember(m: Member): Member {
   return { ...m, joined_at: iso(m.joined_at), last_read_at: iso(m.last_read_at) }
@@ -127,7 +135,8 @@ export function totalUnread(rooms: Pick<RoomSummary, 'unread'>[]) {
 }
 
 /** Bump a room for a newly arrived message: preview, ordering and (if it isn't open) unread. */
-export function bumpRoom(rooms: RoomSummary[], m: Message, me: string, openRoom: string | null): RoomSummary[] {
+export function bumpRoom(rooms: RoomSummary[], m: Message, me: string, openRoom: string | null | ReadonlySet<string>): RoomSummary[] {
+  const isOpen = typeof openRoom === 'string' ? openRoom === m.room_id : !!openRoom?.has(m.room_id)
   const i = rooms.findIndex((r) => r.id === m.room_id)
   if (i < 0) return rooms
   const r = rooms[i]
@@ -140,7 +149,7 @@ export function bumpRoom(rooms: RoomSummary[], m: Message, me: string, openRoom:
     last_user: m.user_id,
     last_has_file: !!m.attachment,
     last_deleted: !!m.deleted_at,
-    unread: mine || openRoom === m.room_id ? r.unread : Math.min(99, r.unread + 1),
+    unread: mine || isOpen ? r.unread : Math.min(99, r.unread + 1),
     last_read_at: mine ? m.created_at : r.last_read_at,
   }
   return [next, ...rooms.slice(0, i), ...rooms.slice(i + 1)]
@@ -158,22 +167,6 @@ export function lastOwnMessage(list: Message[], me: string) {
     if (m.user_id === me && !m.pending && !m.failed && !m.deleted_at) return m
   }
   return null
-}
-
-/* ------------------------------------------------------------------ typing */
-
-export function typingText(names: string[]) {
-  if (!names.length) return ''
-  if (names.length === 1) return `${names[0]} is writing…`
-  if (names.length === 2) return `${names[0]} and ${names[1]} are writing…`
-  return `${names[0]}, ${names[1]} and ${names.length - 2} more are writing…`
-}
-
-/** Drop typists we haven't heard from recently (broadcasts repeat every ~2 s while typing). */
-export function liveTypists(map: Record<string, { name: string; at: number }>, now = Date.now(), ttl = 4000) {
-  return Object.entries(map)
-    .filter(([, v]) => now - v.at < ttl)
-    .map(([id, v]) => ({ id, name: v.name }))
 }
 
 /* ------------------------------------------------------------------ files */

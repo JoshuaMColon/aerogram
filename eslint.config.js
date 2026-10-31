@@ -6,7 +6,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'dist-e2e', 'playwright-report', 'test-results', '.vercel']),
+  globalIgnores(['dist', 'dist-e2e', 'dist-e2e-mock', 'playwright-report', 'test-results', '.vercel']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, tseslint.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
